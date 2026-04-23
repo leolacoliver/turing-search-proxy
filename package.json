@@ -1,0 +1,9 @@
+{
+  "name": "turing-search-proxy",
+  "version": "1.0.0",
+  "description": "Proxy for Turing search API — resolves CORS for browser clients",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
