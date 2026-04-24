@@ -5,16 +5,14 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  let token, query, pageSize = 100, page = 1;
+  let query, pageSize = 100, page = 1;
 
   if (req.method === "GET") {
-    token = req.query.token;
     query = req.query.query;
     pageSize = parseInt(req.query.pageSize || "100");
     page = parseInt(req.query.page || "1");
   } else if (req.method === "POST") {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-    token = body.token;
     query = body.query;
     pageSize = body.pageSize || 100;
     page = body.page || 1;
@@ -22,8 +20,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!token) return res.status(400).json({ error: "token is required" });
   if (!query) return res.status(400).json({ error: "query is required" });
+
+  const token = process.env.TURING_TOKEN;
+  if (!token) {
+    return res.status(401).json({ error: "Please check with Leonardo Oliveira on the new JWT token." });
+  }
 
   const filters = {
     requiredSkills: [], niceToHaveSkills: [], skillYears: {}, budgetType: "hourly",
@@ -54,7 +56,15 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: "Turing API returned non-JSON", raw: text.slice(0, 500) });
     }
 
-    return res.status(upstream.status).json(data);
+    if (!upstream.ok) {
+      // Token likely expired
+      return res.status(upstream.status).json({
+        error: "Please check with Leonardo Oliveira on the new JWT token.",
+        details: data,
+      });
+    }
+
+    return res.status(200).json(data);
   } catch (err) {
     return res.status(500).json({ error: "Proxy error", details: err.message });
   }
