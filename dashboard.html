@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turing Search Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  h1 { font-size: 22px; font-weight: 600; }
+  .back-link { font-size: 13px; color: #1a56cc; text-decoration: none; }
+  .back-link:hover { text-decoration: underline; }
+  .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 14px; font-weight: 600; margin-bottom: 1rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
+  .metric { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem 1.25rem; }
+  .metric-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .metric-value { font-size: 28px; font-weight: 700; }
+  .metric-sub { font-size: 12px; color: #888; margin-top: 2px; }
+  .badge { display: inline-flex; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+  .badge.success { background: #d4edda; color: #155724; }
+  .badge.warning { background: #fef3cd; color: #856404; }
+  .badge.danger  { background: #f8d7da; color: #721c24; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; color: #888; font-weight: 500; padding: 0 12px 8px 0; border-bottom: 1px solid #eee; }
+  td { padding: 9px 12px 9px 0; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .clickable { cursor: pointer; }
+  .clickable:hover td { background: #fafafa; }
+  .sub-row td { background: #fafafa; font-size: 12px; }
+  .sub-sub-row td { background: #f5f5f5; font-size: 11px; color: #666; }
+  .bar-wrap { background: #f0f0f0; border-radius: 99px; height: 6px; min-width: 80px; display: inline-block; width: 100%; }
+  .bar { border-radius: 99px; height: 6px; }
+  .bar.high { background: #28a745; }
+  .bar.mid  { background: #ffc107; }
+  .bar.low  { background: #dc3545; }
+  .expand-btn { font-size: 11px; padding: 2px 8px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; }
+  .problem-tag { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; background: #f8d7da; color: #721c24; margin: 2px; }
+  .chart-wrap { position: relative; height: 260px; }
+  .loading { text-align: center; padding: 3rem; color: #888; font-size: 13px; }
+  .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; font-size: 13px; }
+  .section-title { font-size: 13px; font-weight: 600; margin: 1rem 0 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div>
+      <h1>Search Dashboard</h1>
+      <p style="font-size:13px;color:#666;margin-top:2px">LLM evaluation analytics</p>
+    </div>
+    <a href="/" class="back-link">← Back to search</a>
+  </div>
+
+  <div id="loading" class="card loading">Loading dashboard data...</div>
+  <div id="error" class="error" style="display:none"></div>
+  <div id="content" style="display:none">
+
+    <div class="grid3">
+      <div class="metric"><div class="metric-label">Total runs</div><div class="metric-value" id="kpi-runs">-</div><div class="metric-sub">queries executed</div></div>
+      <div class="metric"><div class="metric-label">Avg match rate</div><div class="metric-value" id="kpi-match">-</div><div class="metric-sub">across all evaluations</div></div>
+      <div class="metric"><div class="metric-label">Profiles evaluated</div><div class="metric-value" id="kpi-profiles">-</div><div class="metric-sub">good fits: <span id="kpi-fits">-</span></div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Match rate by domain</div>
+        <div id="domain-table"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Most common rejection reasons</div>
+        <div id="problems"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Match rate over time</div>
+      <div class="chart-wrap"><canvas id="chart"></canvas></div>
+      <div class="section-title">Daily breakdown — click to expand by domain then subdomain</div>
+      <table>
+        <thead><tr><th>Date</th><th>Runs</th><th>Evaluated</th><th>Good fits</th><th>Match rate</th><th>Progress</th><th></th></tr></thead>
+        <tbody id="daily-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var chartInstance = null;
+
+function barHtml(pct) {
+  var cls = pct >= 60 ? 'high' : pct >= 30 ? 'mid' : 'low';
+  return '<div class="bar-wrap"><div class="bar ' + cls + '" style="width:' + Math.min(pct,100) + '%"></div></div>';
+}
+
+function badge(pct) {
+  var cls = pct >= 60 ? 'success' : pct >= 30 ? 'warning' : 'danger';
+  return '<span class="badge ' + cls + '">' + pct + '%</span>';
+}
+
+function safeId(s) {
+  return s.replace(/[^a-z0-9]/gi, '_');
+}
+
+function toggleRows(prefix) {
+  var rows = document.querySelectorAll('[data-parent="' + prefix + '"]');
+  rows.forEach(function(r) {
+    var isVisible = r.style.display !== 'none';
+    r.style.display = isVisible ? 'none' : '';
+    // Collapse children when hiding
+    if (isVisible) {
+      var childId = r.getAttribute('data-id');
+      if (childId) {
+        document.querySelectorAll('[data-parent="' + childId + '"]').forEach(function(c){ c.style.display='none'; });
+      }
+    }
+  });
+}
+
+function renderKPIs(runs, results) {
+  var total = runs.reduce(function(a,r){return a+(r.total_results||0);},0);
+  var fits = runs.reduce(function(a,r){return a+(r.good_fits||0);},0);
+  var avg = total > 0 ? Math.round(fits/total*100) : 0;
+  document.getElementById('kpi-runs').textContent = runs.length;
+  document.getElementById('kpi-match').textContent = avg + '%';
+  document.getElementById('kpi-profiles').textContent = total.toLocaleString();
+  document.getElementById('kpi-fits').textContent = fits.toLocaleString();
+}
+
+function renderDomainTable(runs) {
+  var domains = {};
+  runs.forEach(function(r) {
+    var d = r.query_domain || 'Unknown';
+    var sd = r.query_subdomain || 'Unknown';
+    if (!domains[d]) domains[d] = { total:0, fits:0, subs:{} };
+    domains[d].total += r.total_results||0;
+    domains[d].fits  += r.good_fits||0;
+    if (!domains[d].subs[sd]) domains[d].subs[sd] = { total:0, fits:0 };
+    domains[d].subs[sd].total += r.total_results||0;
+    domains[d].subs[sd].fits  += r.good_fits||0;
+  });
+
+  var html = '<table><thead><tr><th>Domain</th><th>Evaluated</th><th>Good fits</th><th>Rate</th><th>Progress</th><th></th></tr></thead><tbody>';
+  Object.keys(domains).sort().forEach(function(d) {
+    var dd = domains[d];
+    var pct = dd.total > 0 ? Math.round(dd.fits/dd.total*100) : 0;
+    var did = 'dom_' + safeId(d);
+    html += '<tr class="clickable" onclick="toggleRows(\'' + did + '\')">' +
+      '<td><strong>' + d + '</strong></td>' +
+      '<td>' + dd.total + '</td><td>' + dd.fits + '</td>' +
+      '<td>' + badge(pct) + '</td><td>' + barHtml(pct) + '</td>' +
+      '<td><button class="expand-btn">+</button></td></tr>';
+    Object.keys(dd.subs).sort().forEach(function(sd) {
+      var s = dd.subs[sd];
+      var sp = s.total > 0 ? Math.round(s.fits/s.total*100) : 0;
+      html += '<tr class="sub-row" data-parent="' + did + '" style="display:none">' +
+        '<td style="padding-left:20px">' + sd + '</td>' +
+        '<td>' + s.total + '</td><td>' + s.fits + '</td>' +
+        '<td>' + badge(sp) + '</td><td>' + barHtml(sp) + '</td><td></td></tr>';
+    });
+  });
+  html += '</tbody></table>';
+  document.getElementById('domain-table').innerHTML = html;
+}
+
+function renderDailyTable(runs) {
+  var days = {};
+  runs.forEach(function(r) {
+    var day = (r.created_at||'').slice(0,10);
+    if (!day) return;
+    if (!days[day]) days[day] = { count:0, total:0, fits:0, domains:{} };
+    days[day].count++;
+    days[day].total += r.total_results||0;
+    days[day].fits  += r.good_fits||0;
+    var d = r.query_domain||'Unknown';
+    var sd = r.query_subdomain||'Unknown';
+    if (!days[day].domains[d]) days[day].domains[d] = { total:0, fits:0, subs:{} };
+    days[day].domains[d].total += r.total_results||0;
+    days[day].domains[d].fits  += r.good_fits||0;
+    if (!days[day].domains[d].subs[sd]) days[day].domains[d].subs[sd] = { total:0, fits:0 };
+    days[day].domains[d].subs[sd].total += r.total_results||0;
+    days[day].domains[d].subs[sd].fits  += r.good_fits||0;
+  });
+
+  var rows = '';
+  Object.keys(days).sort().reverse().forEach(function(day) {
+    var dd = days[day];
+    var pct = dd.total > 0 ? Math.round(dd.fits/dd.total*100) : 0;
+    var dayId = 'day_' + safeId(day);
+    rows += '<tr class="clickable" onclick="toggleRows(\'' + dayId + '\')">' +
+      '<td><strong>' + day + '</strong></td><td>' + dd.count + '</td>' +
+      '<td>' + dd.total + '</td><td>' + dd.fits + '</td>' +
+      '<td>' + badge(pct) + '</td><td>' + barHtml(pct) + '</td>' +
+      '<td><button class="expand-btn">+</button></td></tr>';
+
+    Object.keys(dd.domains).sort().forEach(function(d) {
+      var dom = dd.domains[d];
+      var dp = dom.total > 0 ? Math.round(dom.fits/dom.total*100) : 0;
+      var domId = dayId + '_' + safeId(d);
+      rows += '<tr class="sub-row" data-parent="' + dayId + '" data-id="' + domId + '" style="display:none">' +
+        '<td style="padding-left:16px;font-weight:500">' + d + '</td><td>-</td>' +
+        '<td>' + dom.total + '</td><td>' + dom.fits + '</td>' +
+        '<td>' + badge(dp) + '</td><td>' + barHtml(dp) + '</td>' +
+        '<td><button class="expand-btn" onclick="event.stopPropagation();toggleRows(\'' + domId + '\')">+</button></td></tr>';
+
+      Object.keys(dom.subs).sort().forEach(function(sd) {
+        var sub = dom.subs[sd];
+        var sp = sub.total > 0 ? Math.round(sub.fits/sub.total*100) : 0;
+        rows += '<tr class="sub-sub-row" data-parent="' + domId + '" style="display:none">' +
+          '<td style="padding-left:32px">' + sd + '</td><td>-</td>' +
+          '<td>' + sub.total + '</td><td>' + sub.fits + '</td>' +
+          '<td>' + badge(sp) + '</td><td>' + barHtml(sp) + '</td><td></td></tr>';
+      });
+    });
+  });
+  document.getElementById('daily-tbody').innerHTML = rows;
+}
+
+function renderChart(runs) {
+  var days = {};
+  runs.forEach(function(r) {
+    var day = (r.created_at||'').slice(0,10);
+    if (!day) return;
+    if (!days[day]) days[day] = { total:0, fits:0 };
+    days[day].total += r.total_results||0;
+    days[day].fits  += r.good_fits||0;
+  });
+  var labels = Object.keys(days).sort();
+  var data = labels.map(function(d){ return days[d].total > 0 ? Math.round(days[d].fits/days[d].total*100) : 0; });
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(document.getElementById('chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{ label: 'Match rate %', data: data, borderColor: '#1a56cc', backgroundColor: 'rgba(26,86,204,0.08)', tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#1a56cc' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min:0, max:100, ticks: { callback: function(v){ return v+'%'; }, font:{size:11} }, grid:{color:'#f0f0f0'} },
+        x: { ticks: { font:{size:11} }, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderProblems(results) {
+  var noFit = results.filter(function(r){ return r.match === false && r.reason; });
+  if (!noFit.length) { document.getElementById('problems').innerHTML = '<p style="font-size:13px;color:#888">No rejection data yet.</p>'; return; }
+
+  var reasons = noFit.map(function(r){ return r.reason.toLowerCase(); });
+  var patterns = [
+    { label: 'Insufficient years of experience', kw: ['insufficient','only 1yr','only 2yr','only 3yr','lacks experience','less than','below required'] },
+    { label: 'Missing required skill',            kw: ['no evidence of','no python','no django','no react','no javascript','skill not','not found','absent','missing'] },
+    { label: 'Wrong domain / role',               kw: ['not a','unrelated','different role','adjacent','not directly','outside the scope'] },
+    { label: 'Junior / entry level',              kw: ['junior','entry','intern','beginner','limited experience','early career'] },
+    { label: 'Education mismatch',                kw: ['no phd','no degree','no doctorate','education mismatch','does not hold'] },
+    { label: 'Location mismatch',                 kw: ['not from us','outside us','non-us','location','not based'] },
+    { label: 'Vague / limited evidence',          kw: ['limited evidence','no project','unclear','vague','insufficient detail'] },
+  ];
+
+  var counts = patterns.map(function(p) {
+    var n = reasons.filter(function(r){ return p.kw.some(function(k){ return r.indexOf(k)!==-1; }); }).length;
+    return { label: p.label, count: n, pct: Math.round(n/noFit.length*100) };
+  }).filter(function(p){ return p.count > 0; }).sort(function(a,b){ return b.count-a.count; });
+
+  var html = '<table><thead><tr><th>Problem</th><th>Count</th><th>% of rejections</th><th></th></tr></thead><tbody>';
+  counts.forEach(function(p) {
+    html += '<tr><td>' + p.label + '</td><td>' + p.count + '</td><td>' + p.pct + '%</td><td>' + barHtml(p.pct) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+
+  // Keyword cloud
+  var wordMap = {};
+  reasons.slice(0,200).forEach(function(r) {
+    r.split(/[\s,;.!?()\[\]]+/).forEach(function(w) {
+      w = w.replace(/[^a-z]/g,'');
+      var stop = ['with','that','this','from','have','only','than','more','less','does','years','experience','skills','their','which','there','based','found','match','good','does','candidate','profile'];
+      if (w.length > 4 && stop.indexOf(w) === -1) wordMap[w] = (wordMap[w]||0)+1;
+    });
+  });
+  var topWords = Object.keys(wordMap).sort(function(a,b){return wordMap[b]-wordMap[a];}).slice(0,18);
+  html += '<div style="margin-top:1rem"><div style="font-size:11px;color:#888;margin-bottom:6px">Common keywords in rejections</div>';
+  topWords.forEach(function(w){ html += '<span class="problem-tag">' + w + ' (' + wordMap[w] + ')</span>'; });
+  html += '</div>';
+
+  document.getElementById('problems').innerHTML = html;
+}
+
+// Auto-load on page open
+window.addEventListener('load', async function() {
+  try {
+    var res = await fetch('/api/dashboard');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = '';
+
+    renderKPIs(data.runs, data.results);
+    renderDomainTable(data.runs);
+    renderDailyTable(data.runs);
+    renderChart(data.runs);
+    renderProblems(data.results);
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    var el = document.getElementById('error');
+    el.textContent = 'Error loading dashboard: ' + e.message;
+    el.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
