@@ -101,19 +101,17 @@ Domain and subdomain classification reference:
 - Domain "Unknown" → if none of the above clearly match
 `.trim();
 
-  const prompt = `You are an expert talent recruiter evaluating candidates for the following search query: "${query}".
+  const prompt = `You are an expert technical recruiter evaluating whether candidates match a search query.
 
 First, classify this query into a domain and subdomain using this reference:
 ${domainContext}
 
-Then, for each candidate, decide if they are a good fit (>=70% match).
+Then, for each candidate, evaluate them against the query: "${query}"
 
-Rules:
-- Base your evaluation strictly on what is present in the candidate data — do not fabricate facts.
-- Good fit (match: true): candidate clearly meets the query requirements. State specifically which skills, experience, or background supports this.
-- No fit (match: false): clearly state what is missing or insufficient (e.g. "only 1yr Python, query requires 5+", "no Django experience found").
-- Be concise but specific. No vague praise or filler.
-- No preamble, no trailing commentary.
+Evaluation rules:
+- Mark "good" only if the candidate plausibly satisfies the core intent: required skills (or directly comparable ones), role/title alignment, and any hard constraints the query mentions (country, YOE minimum, education level, rate).
+- Mark "bad" if any core intent is clearly missing, OR when uncertain. Default to "bad" on ambiguity.
+- Reason: <= 200 chars, concrete and specific (name the skill or constraint that decided it). No hedging.
 - You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
 
 Reply ONLY with this exact JSON structure:
@@ -121,7 +119,7 @@ Reply ONLY with this exact JSON structure:
   "query_domain": "domain name",
   "query_subdomain": "subdomain name",
   "results": [
-    {"index": 0, "match": true, "reason": "concrete reason"},
+    {"index": 0, "verdict": "good", "reason": "..."},
     ...
   ]
 }
@@ -163,6 +161,9 @@ ${text}`;
     const remapped = parsed.results.map(item => ({
       ...item,
       index: indexMap[item.index] ?? item.index,
+      // Normalize verdict → match for UI compatibility
+      match: item.verdict === "good" || item.match === true,
+      verdict: item.verdict || (item.match ? "good" : "bad"),
       query_domain: queryDomain,
       query_subdomain: querySubdomain,
     }));
