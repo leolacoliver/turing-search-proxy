@@ -1,4 +1,4 @@
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   const filters = {
     requiredSkills: [], niceToHaveSkills: [], skillYears: {}, budgetType: "hourly",
     maxRate: "", allowHigherRates: false, higherRatePercent: "10",
-    rateSources: ["icf", "past_engagement", "onboarding"],
+    rateSources: ["past", "icf", "signup"],
     includeTalentWithoutRates: true,
     selectedCountries: [], selectedLanguages: [], contextTags: [],
     vettingFlow: null, vettingFlowLabel: null,
@@ -35,15 +35,12 @@ export default async function handler(req, res) {
     "Accept": "application/json",
     "Origin": "https://search.turing.com",
     "Referer": "https://search.turing.com/search",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "cache-control": "no-cache",
     "pragma": "no-cache",
   };
 
-  // Step 1: Smart search to get candidates + decomposition
-  let talents = [];
-  let decomposition = null;
-
+  // Smart search to get talents + decomposition
   try {
     const searchRes = await fetch("https://search.turing.com/api/talent/search/smart", {
       method: "POST",
@@ -54,52 +51,17 @@ export default async function handler(req, res) {
     const searchData = await searchRes.json();
     if (!searchRes.ok) return res.status(searchRes.status).json({ error: "Search failed", details: searchData });
 
-    talents = searchData.talents || searchData.results || [];
-    decomposition = searchData.decomposition || null;
-  } catch (err) {
-    return res.status(500).json({ error: "Search error", details: err.message });
-  }
+    const talents = searchData.talents || searchData.results || [];
+    const decomposition = searchData.decomposition || null;
 
-  if (!talents.length) return res.status(200).json({ talents: [], evaluations: [], decomposition: null });
-
-  // Step 2: Call Turing's evaluate endpoint with exact same payload format
-  try {
-    const evalPayload = { query, filters, decomposition };
-
-    const evalRes = await fetch("https://search.turing.com/api/talent/search/evaluate", {
-      method: "POST",
-      headers,
-      body: JSON.stringify(evalPayload),
-    });
-
-    const rawText = await evalRes.text();
-
-    // Try to parse as JSON first
-    let evaluations = [];
-    try {
-      const parsed = JSON.parse(rawText);
-      evaluations = Array.isArray(parsed) ? parsed : (parsed.results || parsed.talents || parsed.data || []);
-    } catch (e) {
-      // If not JSON, might be CSV or streaming — return raw for debugging
-      return res.status(200).json({
-        talents,
-        evaluations: [],
-        decomposition,
-        _raw: rawText.slice(0, 2000),
-        _evalStatus: evalRes.status,
-        _parseError: e.message,
-      });
-    }
-
+    // Return token (needed for browser to call evaluate directly) + search results
     return res.status(200).json({
       talents,
-      evaluations,
       decomposition,
-      _evalStatus: evalRes.status,
-      _evalCount: evaluations.length,
+      filters,
+      token, // browser needs this to call /evaluate directly
     });
-
   } catch (err) {
-    return res.status(500).json({ error: "Evaluate error", details: err.message });
+    return res.status(500).json({ error: "Search error", details: err.message });
   }
 }
