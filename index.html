@@ -93,6 +93,21 @@ select option{background:var(--bg3);}
 .reason-box.nofit{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.15);}
 .reason-label{font-weight:700;margin-bottom:2px;}
 
+/* REVIEW */
+.review-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.review-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px;}
+.review-textarea{width:100%;min-height:60px;max-height:200px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;outline:none;line-height:1.5;}
+.review-textarea:focus{border-color:var(--blue);}
+.review-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.review-btn{padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;}
+.review-btn:hover{background:var(--blue2);}
+.review-btn:disabled{background:var(--text3);cursor:not-allowed;}
+.review-sent{font-size:11px;color:#34d399;display:none;}
+.reviewer-input{padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);width:140px;outline:none;}
+.reviewer-input:focus{border-color:var(--blue);}
+.review-textarea{width:100%;min-height:60px;max-height:200px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;outline:none;line-height:1.5;margin-top:2px;}
+.review-textarea:focus{border-color:var(--blue);}
+
 /* MISC */
 .error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:10px;}
 .run-id-box{font-size:11px;color:var(--text3);margin-top:8px;font-family:monospace;}
@@ -270,10 +285,23 @@ function initUI(queries) {
     var div=document.createElement('div');
     div.className='query-panel';div.id='panel-'+qid(q);
     var safeQ=q.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var panelId=qid(q);
     div.innerHTML='<div class="query-panel-header" onclick="togglePanel(\''+safeQ+'\')">'+
       '<span class="query-panel-title">'+q+'</span>'+
       '<span class="badge info panel-badge">queued</span></div>'+
-      '<div class="query-panel-body"><div class="mini-log"></div><div class="profiles-mini"></div></div>';
+      '<div class="query-panel-body">'+
+        '<div class="mini-log"></div>'+
+        '<div class="profiles-mini"></div>'+
+        '<div class="review-box" id="review-box-'+panelId+'" style="display:none">'+
+          '<div class="review-label" style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px;">Human Review</div>'+
+          '<textarea class="review-textarea" id="review-text-'+panelId+'" placeholder="Add your observations about these LLM results..."></textarea>'+
+          '<div class="review-row" style="display:flex;align-items:center;gap:8px;margin-top:6px;">'+
+            '<input class="reviewer-input" id="reviewer-name-'+panelId+'" placeholder="Your name" style="padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);width:140px;outline:none;"/>'+
+            '<button class="review-btn" id="review-btn-'+panelId+'" onclick="submitReview(''+safeQ+'',''+panelId+'')" style="padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Submit review</button>'+
+            '<span id="review-sent-'+panelId+'" style="font-size:11px;color:#34d399;display:none">Saved!</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
     panelsEl.appendChild(div);
   });
   document.getElementById('panels-section').style.display='';
@@ -339,6 +367,10 @@ async function runQuery(query,pageSize,runId){
   log('Done. '+good+'/'+total+' good fits.');
   updatePanel(query);updateSummaryRow(query);
 
+  // Enable human review box
+  var reviewBox=document.getElementById('review-box-'+qid(query));
+  if(reviewBox) reviewBox.style.display='block';
+
   try{
     var res3=await fetch(PROXY+'/api/runs',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({runId:runId,query:query,queryDomain:s.domain,querySubdomain:s.subdomain,totalResults:total,goodFits:good,matchRate:matchRate})});
@@ -346,6 +378,47 @@ async function runQuery(query,pageSize,runId){
     if(data3.ok) log('Saved to Supabase.');
     else log('Supabase warning: '+JSON.stringify(data3));
   }catch(e){log('Warning: could not save: '+e.message);}
+}
+
+async function submitReview(query, panelId) {
+  var reviewText = document.getElementById('review-text-'+panelId).value.trim();
+  var reviewerName = document.getElementById('reviewer-name-'+panelId).value.trim() || 'anonymous';
+  var btn = document.getElementById('review-btn-'+panelId);
+  var sent = document.getElementById('review-sent-'+panelId);
+
+  if (!reviewText) { alert('Please add a review before submitting.'); return; }
+
+  var s = state[query];
+  if (!s || !s.runId) { alert('Run ID not found for this query.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    var res = await fetch(PROXY+'/api/review', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        runId: s.runId,
+        query: query,
+        review: reviewText,
+        reviewedBy: reviewerName,
+      })
+    });
+    var data = await res.json();
+    if (data.ok) {
+      btn.textContent = 'Submitted';
+      sent.style.display = 'inline';
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Submit review';
+      alert('Error saving review: ' + (data.error || 'unknown'));
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Submit review';
+    alert('Error: ' + e.message);
+  }
 }
 
 async function runAll(){
@@ -358,7 +431,7 @@ async function runAll(){
   var runId='run_'+Date.now();
   var box=document.getElementById('run-id-box');
   box.textContent='Run ID: '+runId;box.style.display='';
-  queries.forEach(function(q){state[q]={status:'queued',profiles:[],evaluations:{},logs:[],domain:null,subdomain:null};});
+  queries.forEach(function(q){state[q]={status:'queued',profiles:[],evaluations:{},logs:[],domain:null,subdomain:null,runId:runId};});
   initUI(queries);setGlobalStatus('running');
   queries.forEach(function(q){updateSummaryRow(q);updatePanel(q);});
   await Promise.all(queries.map(function(q){return runQuery(q,pageSize,runId);}));
