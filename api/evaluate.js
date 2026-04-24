@@ -9,8 +9,11 @@ export default async function handler(req, res) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY not configured" });
 
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
   const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-  const { query, profiles } = body;
+  const { query, profiles, runId } = body;
 
   if (!query) return res.status(400).json({ error: "query is required" });
   if (!profiles || !profiles.length) return res.status(400).json({ error: "profiles is required" });
@@ -24,9 +27,7 @@ export default async function handler(req, res) {
     }).filter(Boolean).slice(0, 12).join(", ") || "—";
   }
 
-  // Build profile text using sequential 0-based index within this batch
-  // but store the global _idx so we can map back correctly
-  const indexMap = {}; // batchIndex -> globalIdx
+  const indexMap = {};
   const text = profiles.map((p, batchIndex) => {
     const globalIdx = p._idx ?? batchIndex;
     indexMap[batchIndex] = globalIdx;
@@ -34,17 +35,22 @@ export default async function handler(req, res) {
     const skills = extractSkills(p);
     const exp = p.totalExperience || p.yearsOfExperience || "?";
     const title = p.title || p.designation || "";
-    return `[${batchIndex}] ${name} | ${title} | ${exp}yrs | Skills: ${skills}`;
+    const resume = p.resume_plain_text ? p.resume_plain_text.slice(0, 800) : "";
+    return `[${batchIndex}] ${name} | ${title} | ${exp}yrs | Skills: ${skills}${resume ? ` | Resume excerpt: ${resume}` : ""}`;
   }).join("\n");
 
-  const prompt = `You are an expert talent recruiter, and you will evaluate talent profiles for the search query: "${query}".
-For each profile, decide if it's a good fit (>=70% match).
-Your answer must be a concrete statement grounded in the candidate's fields (role, country, city, continent, years_of_experience, skills, education, work_experience, languages, certifications, publications, resume_plain_text) — not vague praise.
-- If the candidate is a weak match with less than 70%, still return the format below, but add a brief caveat (e.g., "limited evidence of X", "only adjacent to Y") where relevant.
-- Do not fabricate facts that aren't present in the candidate payload.
+  const prompt = `You are an expert talent recruiter evaluating profiles for: "${query}".
+
+For each profile decide if it is a good fit (>=70% match). Base your answer strictly on what is present in the data.
+
+Rules:
+- Good fit (match: true): candidate clearly meets the query requirements.
+- No fit (match: false): briefly state what is missing or weak (e.g. "only 2yrs Python, no Django experience").
+- Do not fabricate facts not present in the data.
 - No preamble, no trailing commentary.
+
 Reply ONLY with a JSON array, one object per profile, in order:
-[{"index":0,"match":true,"reason":"short reason"},...]
+[{"index":0,"match":true,"reason":"concrete reason based on data"},...]
 
 Profiles:
 ${text}`;
@@ -59,25 +65,48 @@ ${text}`;
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 2000,
+        max_tokens: 8000,
         temperature: 0,
       }),
     });
 
     const llmData = await llmRes.json();
-
-    if (!llmRes.ok) {
-      return res.status(502).json({ error: "OpenAI API error", details: llmData });
-    }
+    if (!llmRes.ok) return res.status(502).json({ error: "OpenAI API error", details: llmData });
 
     const raw = llmData?.choices?.[0]?.message?.content || "";
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
 
-    // Remap batch index back to global index
     const remapped = parsed.map(item => ({
       ...item,
       index: indexMap[item.index] ?? item.index,
     }));
+
+    // Save to Supabase if configured
+    if (supabaseUrl && supabaseKey && runId) {
+      const rows = remapped.map(item => {
+        const p = profiles.find(pr => (pr._idx ?? 0) === (item.index - (profiles[0]?._idx ?? 0)));
+        const name = p ? (p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim()) : "Unknown";
+        return {
+          run_id: runId,
+          query,
+          candidate_name: name,
+          candidate_idx: item.index,
+          match: item.match,
+          reason: item.reason,
+        };
+      });
+
+      await fetch(`${supabaseUrl}/rest/v1/evaluations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify(rows),
+      });
+    }
 
     return res.status(200).json({ results: remapped });
   } catch (err) {
