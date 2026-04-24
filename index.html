@@ -14,7 +14,7 @@
   label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
   input, textarea, select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; }
   textarea { resize: vertical; font-family: monospace; }
-  .row { display: grid; grid-template-columns: 1fr 140px; gap: 12px; margin-top: 10px; }
+  .row { display: grid; grid-template-columns: 1fr 140px; gap: 12px; }
   .field { margin-bottom: 10px; }
   button { padding: 9px 20px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
   button:disabled { background: #999; cursor: not-allowed; }
@@ -24,8 +24,6 @@
   .badge.warning { background: #fef3cd; color: #856404; }
   .badge.success { background: #d4edda; color: #155724; }
   .badge.danger  { background: #f8d7da; color: #721c24; }
-
-  /* Summary table */
   .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .summary-table th { text-align: left; font-size: 11px; color: #888; font-weight: 500; padding: 0 12px 8px 0; border-bottom: 1px solid #eee; }
   .summary-table td { padding: 10px 12px 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
@@ -33,30 +31,38 @@
   .progress-bar-wrap { background: #f0f0f0; border-radius: 99px; height: 6px; width: 100%; min-width: 80px; }
   .progress-bar { background: #28a745; border-radius: 99px; height: 6px; transition: width 0.3s; }
   .progress-bar.running { background: #1a56cc; }
-
-  /* Query detail panels */
-  .query-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .query-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
   .query-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }
-  .query-panel-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
+  .query-panel-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; user-select: none; }
   .query-panel-header:hover { background: #fafafa; }
   .query-panel-title { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .query-panel-body { display: none; padding: 12px 16px; }
   .query-panel-body.open { display: block; }
-  .mini-log { font-family: monospace; font-size: 10px; color: #888; max-height: 100px; overflow-y: auto; margin-bottom: 10px; }
-  .profiles-mini { max-height: 300px; overflow-y: auto; }
-  .profile-mini { border: 1px solid #e0e0e0; border-radius: 6px; padding: 7px 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 12px; }
-  .profile-mini.fit { border-color: #28a745; }
-  .profile-mini.nofit { border-color: #e0e0e0; }
-  .avatar-mini { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .mini-log { font-family: monospace; font-size: 10px; color: #888; max-height: 80px; overflow-y: auto; margin-bottom: 10px; background: #f8f8f8; padding: 6px 8px; border-radius: 6px; }
+  .profiles-mini { max-height: 400px; overflow-y: auto; }
+
+  /* Profile card */
+  .profile-card { border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; border: 1px solid #e0e0e0; }
+  .profile-card.fit   { border-color: #28a745; background: #f6fff8; }
+  .profile-card.nofit { border-color: #e0e0e0; background: #fff; }
+  .profile-card-header { display: flex; align-items: center; gap: 8px; }
+  .avatar-mini { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
   .avatar-mini.pending { background: #f0f0f0; color: #888; }
-  .avatar-mini.fit { background: #d4edda; color: #155724; }
-  .avatar-mini.nofit { background: #f8d7da; color: #721c24; }
-  .profile-mini-name { font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .profile-mini-detail { font-size: 11px; color: #888; }
+  .avatar-mini.fit    { background: #d4edda; color: #155724; }
+  .avatar-mini.nofit  { background: #f8d7da; color: #721c24; }
+  .profile-name { font-weight: 500; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-skills { font-size: 11px; color: #888; margin-top: 2px; }
+
+  /* Reason box */
+  .reason-box { margin-top: 7px; padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.5; }
+  .reason-box.fit   { background: #d4edda; color: #155724; }
+  .reason-box.nofit { background: #f8d7da; color: #721c24; }
+  .reason-label { font-weight: 600; margin-bottom: 2px; }
 
   .error-box { background: #f8d7da; color: #721c24; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; }
   #status-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
   .section-title { font-size: 14px; font-weight: 500; margin-bottom: 12px; }
+  .run-id-box { font-size: 11px; color: #888; margin-top: 8px; font-family: monospace; }
 </style>
 </head>
 <body>
@@ -72,7 +78,7 @@
     <div class="row">
       <div class="field">
         <label>Search Queries — one per line (up to 10)</label>
-        <textarea id="queries" rows="6" placeholder="python 5+ years&#10;react senior developer&#10;django backend 3+ years&#10;node.js fullstack"></textarea>
+        <textarea id="queries" rows="6" placeholder="python 5+ years&#10;react senior developer&#10;django backend 3+ years"></textarea>
       </div>
       <div class="field">
         <label>Page Size</label>
@@ -88,9 +94,9 @@
       <button id="run-btn" onclick="runAll()">Run all queries</button>
       <span id="status-badge" class="badge neutral">idle</span>
     </div>
+    <div id="run-id-box" class="run-id-box" style="display:none"></div>
   </div>
 
-  <!-- Summary table -->
   <div id="summary-card" class="card" style="display:none">
     <div class="section-title">Results summary</div>
     <table class="summary-table">
@@ -109,18 +115,15 @@
     </table>
   </div>
 
-  <!-- Per-query detail panels -->
   <div id="panels-section" style="display:none">
-    <div class="section-title" style="margin-bottom:12px">Per-query details</div>
+    <div class="section-title">Per-query details</div>
     <div class="query-panels" id="query-panels"></div>
   </div>
 </div>
 
 <script>
 const PROXY = window.location.origin;
-
-// State per query
-const state = {}; // key: query string
+const state = {};
 
 function extractSkills(p) {
   const raw = p.skills || p.topSkills || p.primarySkills || [];
@@ -131,60 +134,55 @@ function extractSkills(p) {
   }).filter(Boolean).slice(0, 8).join(', ') || '—';
 }
 
+function qid(q) {
+  return 'q' + Array.from(q).reduce((a,c)=>a+c.charCodeAt(0),0) + q.length;
+}
+
 function setGlobalStatus(s) {
-  const map = {
-    idle:    { label: 'idle',       cls: 'neutral' },
-    running: { label: 'running…',   cls: 'info' },
-    done:    { label: 'all done',   cls: 'success' },
-  };
+  const map = { idle: ['idle','neutral'], running: ['running…','info'], done: ['all done','success'] };
+  const [label, cls] = map[s] || ['idle','neutral'];
   const b = document.getElementById('status-badge');
-  b.textContent = map[s]?.label || s;
-  b.className = 'badge ' + (map[s]?.cls || 'neutral');
+  b.textContent = label; b.className = 'badge ' + cls;
   document.getElementById('run-btn').disabled = s === 'running';
 }
 
 function showError(msg) {
   const el = document.getElementById('error-box');
-  el.textContent = msg;
-  el.style.display = msg ? 'block' : 'none';
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
 }
 
 function updateSummaryRow(query) {
   const s = state[query];
-  const row = document.getElementById('row-' + btoa(unescape(encodeURIComponent(query))).replace(/=/g,''));
+  const row = document.getElementById('row-' + qid(query));
   if (!row) return;
-
   const total = s.profiles.length;
   const evDone = Object.keys(s.evaluations).length;
   const goodCount = Object.values(s.evaluations).filter(e => e.match).length;
   const pct = total > 0 ? Math.round(goodCount / total * 100) : 0;
   const evPct = total > 0 ? Math.round(evDone / total * 100) : 0;
   const isDone = s.status === 'done' || s.status === 'error';
-  const isRunning = !isDone;
-
+  const cls = s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : s.status === 'evaluating' ? 'warning' : 'info';
   row.innerHTML = `
-    <td style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${query}</td>
-    <td><span class="badge ${s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : s.status === 'evaluating' ? 'warning' : 'info'}">${s.status}</span></td>
+    <td style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${query}</td>
+    <td><span class="badge ${cls}">${s.status}</span></td>
     <td>${total || '—'}</td>
     <td>${isDone ? `${goodCount}/${total}` : evDone > 0 ? `${goodCount} so far` : '—'}</td>
-    <td>${isDone ? `${pct}%` : evDone > 0 ? `${pct}%` : '—'}</td>
+    <td>${isDone || evDone > 0 ? `${pct}%` : '—'}</td>
     <td style="min-width:100px">
       <div class="progress-bar-wrap">
-        <div class="progress-bar ${isRunning ? 'running' : ''}" style="width:${isDone ? pct : evPct}%"></div>
+        <div class="progress-bar ${!isDone ? 'running' : ''}" style="width:${isDone ? pct : evPct}%"></div>
       </div>
     </td>
-    <td><button onclick="togglePanel('${query.replace(/'/g,"\\'")}') " style="padding:3px 10px;font-size:11px;background:#f0f0f0;color:#333">details</button></td>
+    <td><button onclick="togglePanel('${query.replace(/'/g,"\\'")}')" style="padding:3px 10px;font-size:11px;background:#f0f0f0;color:#333;border:none;border-radius:6px;cursor:pointer">details</button></td>
   `;
 }
 
 function updatePanel(query) {
   const s = state[query];
-  const id = 'panel-' + btoa(unescape(encodeURIComponent(query))).replace(/=/g,'');
-  const panel = document.getElementById(id);
+  const id = qid(query);
+  const panel = document.getElementById('panel-' + id);
   if (!panel) return;
 
-  // Update header badge
-  const evDone = Object.keys(s.evaluations).length;
   const goodCount = Object.values(s.evaluations).filter(e => e.match).length;
   const total = s.profiles.length;
   const hdr = panel.querySelector('.panel-badge');
@@ -193,60 +191,62 @@ function updatePanel(query) {
     hdr.className = 'badge ' + (s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : 'info');
   }
 
-  // Update log
   const logEl = panel.querySelector('.mini-log');
   if (logEl) logEl.innerHTML = s.logs.map(l => `<div>${l}</div>`).join('');
 
-  // Update profiles
   const profilesEl = panel.querySelector('.profiles-mini');
-  if (profilesEl) {
-    profilesEl.innerHTML = s.profiles.slice(0, 100).map((p, i) => {
-      const ev = s.evaluations[i];
-      const fit = ev?.match;
-      const pending = ev === undefined;
-      const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
-      const skills = extractSkills(p);
-      return `
-        <div class="profile-mini ${pending ? '' : fit ? 'fit' : 'nofit'}">
-          <div class="avatar-mini ${pending ? 'pending' : fit ? 'fit' : 'nofit'}">${i+1}</div>
+  if (!profilesEl) return;
+
+  profilesEl.innerHTML = s.profiles.slice(0, 100).map((p, i) => {
+    const ev = s.evaluations[i];
+    const fit = ev?.match;
+    const pending = ev === undefined;
+    const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
+    const skills = extractSkills(p);
+    const avatarCls = pending ? 'pending' : fit ? 'fit' : 'nofit';
+    const cardCls = pending ? '' : fit ? 'fit' : 'nofit';
+
+    return `
+      <div class="profile-card ${cardCls}">
+        <div class="profile-card-header">
+          <div class="avatar-mini ${avatarCls}">${i+1}</div>
           <div style="flex:1;min-width:0">
-            <div class="profile-mini-name">${name}</div>
-            <div class="profile-mini-detail">${skills}</div>
-            ${ev?.reason ? `<div class="profile-mini-detail" style="font-style:italic">${ev.reason}</div>` : ''}
+            <div class="profile-name">${name}</div>
+            <div class="profile-skills">${skills}</div>
           </div>
-          <span class="badge ${pending ? 'neutral' : fit ? 'success' : 'danger'}" style="font-size:10px">${pending ? '…' : fit ? 'fit' : 'no'}</span>
+          <span class="badge ${pending ? 'neutral' : fit ? 'success' : 'danger'}">${pending ? '…' : fit ? 'fit' : 'no fit'}</span>
         </div>
-      `;
-    }).join('');
-  }
+        ${ev?.reason ? `
+          <div class="reason-box ${fit ? 'fit' : 'nofit'}">
+            <div class="reason-label">${fit ? '✓ Why fit' : '✗ Why not fit'}</div>
+            ${ev.reason}
+          </div>` : ''}
+      </div>
+    `;
+  }).join('');
 }
 
 function togglePanel(query) {
-  const id = 'panel-' + btoa(unescape(encodeURIComponent(query))).replace(/=/g,'');
-  const body = document.querySelector(`#${id} .query-panel-body`);
+  const body = document.querySelector('#panel-' + qid(query) + ' .query-panel-body');
   if (body) body.classList.toggle('open');
 }
 
 function initUI(queries) {
-  // Summary table rows
   const tbody = document.getElementById('summary-tbody');
   tbody.innerHTML = '';
   queries.forEach(q => {
-    const id = 'row-' + btoa(unescape(encodeURIComponent(q))).replace(/=/g,'');
     const tr = document.createElement('tr');
-    tr.id = id;
+    tr.id = 'row-' + qid(q);
     tbody.appendChild(tr);
   });
   document.getElementById('summary-card').style.display = '';
 
-  // Per-query panels
   const panelsEl = document.getElementById('query-panels');
   panelsEl.innerHTML = '';
   queries.forEach(q => {
-    const id = 'panel-' + btoa(unescape(encodeURIComponent(q))).replace(/=/g,'');
     const div = document.createElement('div');
     div.className = 'query-panel';
-    div.id = id;
+    div.id = 'panel-' + qid(q);
     div.innerHTML = `
       <div class="query-panel-header" onclick="togglePanel('${q.replace(/'/g,"\\'")}')">
         <span class="query-panel-title">${q}</span>
@@ -262,7 +262,7 @@ function initUI(queries) {
   document.getElementById('panels-section').style.display = '';
 }
 
-async function runQuery(query, token, pageSize) {
+async function runQuery(query, token, pageSize, runId) {
   const s = state[query];
   s.status = 'searching';
   s.logs = [];
@@ -276,7 +276,6 @@ async function runQuery(query, token, pageSize) {
 
   log(`Searching "${query}"…`);
 
-  // 1. Search
   try {
     const params = new URLSearchParams({ token, query, pageSize, page: '1' });
     const res = await fetch(`${PROXY}/api/search?${params}`);
@@ -292,7 +291,6 @@ async function runQuery(query, token, pageSize) {
     updateSummaryRow(query); updatePanel(query); return;
   }
 
-  // 2. Evaluate
   s.status = 'evaluating';
   log(`Evaluating ${Math.min(s.profiles.length, 100)} profiles…`);
   updateSummaryRow(query);
@@ -306,7 +304,7 @@ async function runQuery(query, token, pageSize) {
       const res = await fetch(`${PROXY}/api/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, profiles: batch }),
+        body: JSON.stringify({ query, profiles: batch, runId }),
       });
       const data = await res.json();
       for (const item of (data.results || [])) {
@@ -340,7 +338,10 @@ async function runAll() {
   const queries = rawQueries.split('\n').map(q => q.trim()).filter(Boolean).slice(0, 10);
   if (!queries.length) { showError('No valid queries found.'); return; }
 
-  // Init state
+  const runId = 'run_' + Date.now();
+  document.getElementById('run-id-box').textContent = `Run ID: ${runId} — use this to query results in Supabase`;
+  document.getElementById('run-id-box').style.display = '';
+
   queries.forEach(q => {
     state[q] = { status: 'queued', profiles: [], evaluations: {}, logs: [] };
   });
@@ -349,9 +350,7 @@ async function runAll() {
   setGlobalStatus('running');
   queries.forEach(q => { updateSummaryRow(q); updatePanel(q); });
 
-  // Run all in parallel
-  await Promise.all(queries.map(q => runQuery(q, token, pageSize)));
-
+  await Promise.all(queries.map(q => runQuery(q, token, pageSize, runId)));
   setGlobalStatus('done');
 }
 </script>
