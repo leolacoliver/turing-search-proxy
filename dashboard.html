@@ -3,69 +3,135 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Turing Search Dashboard</title>
+<title>Turing · Search Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; padding: 2rem 1rem; }
-  .container { max-width: 1200px; margin: 0 auto; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
-  h1 { font-size: 22px; font-weight: 600; }
-  .back-link { font-size: 13px; color: #1a56cc; text-decoration: none; }
-  .back-link:hover { text-decoration: underline; }
-  .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
-  .card-title { font-size: 14px; font-weight: 600; margin-bottom: 1rem; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
-  .metric { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem 1.25rem; }
-  .metric-label { font-size: 11px; color: #888; margin-bottom: 4px; }
-  .metric-value { font-size: 28px; font-weight: 700; }
-  .metric-sub { font-size: 12px; color: #888; margin-top: 2px; }
-  .badge { display: inline-flex; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; }
-  .badge.success { background: #d4edda; color: #155724; }
-  .badge.warning { background: #fef3cd; color: #856404; }
-  .badge.danger  { background: #f8d7da; color: #721c24; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; font-size: 11px; color: #888; font-weight: 500; padding: 0 12px 8px 0; border-bottom: 1px solid #eee; }
-  td { padding: 9px 12px 9px 0; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  .clickable { cursor: pointer; }
-  .clickable:hover td { background: #fafafa; }
-  .sub-row td { background: #fafafa; font-size: 12px; }
-  .sub-sub-row td { background: #f5f5f5; font-size: 11px; color: #666; }
-  .bar-wrap { background: #f0f0f0; border-radius: 99px; height: 6px; min-width: 80px; display: inline-block; width: 100%; }
-  .bar { border-radius: 99px; height: 6px; }
-  .bar.high { background: #28a745; }
-  .bar.mid  { background: #ffc107; }
-  .bar.low  { background: #dc3545; }
-  .expand-btn { font-size: 11px; padding: 2px 8px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; }
-  .problem-tag { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; background: #f8d7da; color: #721c24; margin: 2px; }
-  .chart-wrap { position: relative; height: 260px; }
-  .loading { text-align: center; padding: 3rem; color: #888; font-size: 13px; }
-  .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; font-size: 13px; }
-  .section-title { font-size: 13px; font-weight: 600; margin: 1rem 0 8px; }
+:root {
+  --bg:#08090f; --bg2:#0f1220; --bg3:#161b2e; --border:#1e2a42;
+  --blue:#2563eb; --blue2:#3b82f6; --green:#10b981; --yellow:#f59e0b; --red:#ef4444;
+  --text:#f1f5f9; --text2:#94a3b8; --text3:#475569;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* NAV */
+nav{background:#fff;border-bottom:3px solid var(--blue);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;position:sticky;top:0;z-index:100;}
+.nav-left{display:flex;align-items:center;gap:16px;}
+.nav-badge{font-size:11px;background:#eff6ff;color:var(--blue);padding:3px 10px;border-radius:99px;font-weight:600;}
+nav a.nav-link{font-size:13px;color:#374151;text-decoration:none;}
+nav a.nav-link:hover{color:var(--blue);}
+
+/* LAYOUT */
+.page{max-width:1280px;margin:0 auto;padding:2rem 1.5rem;}
+.page-header{margin-bottom:1.5rem;}
+.page-title{font-size:22px;font-weight:700;margin-bottom:3px;}
+.page-sub{font-size:13px;color:var(--text2);}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem;}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:1rem;}
+
+/* GRIDS */
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+
+/* KPI */
+.kpi-value{font-size:30px;font-weight:700;line-height:1;margin-bottom:4px;}
+.kpi-label{font-size:12px;color:var(--text2);}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.kpi-accent{color:var(--blue2);}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;font-size:10px;color:var(--text3);font-weight:600;padding:0 10px 8px 0;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.clickable{cursor:pointer;}
+.clickable:hover td{background:var(--bg3);}
+.sub-row td{background:var(--bg3);font-size:12px;color:var(--text2);}
+.sub-sub-row td{background:#0c1120;font-size:11px;color:var(--text3);}
+
+/* BADGE */
+.badge{display:inline-flex;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;}
+.badge.green{background:rgba(16,185,129,.15);color:#34d399;}
+.badge.yellow{background:rgba(245,158,11,.15);color:#fbbf24;}
+.badge.red{background:rgba(239,68,68,.15);color:#f87171;}
+.badge.blue{background:rgba(37,99,235,.15);color:var(--blue2);}
+
+/* BAR */
+.bar-wrap{background:var(--border);border-radius:99px;height:5px;min-width:60px;display:inline-block;width:100%;}
+.bar{border-radius:99px;height:5px;}
+.bar.green{background:var(--green);}
+.bar.yellow{background:var(--yellow);}
+.bar.red{background:var(--red);}
+
+/* BUTTONS */
+.expand-btn{font-size:11px;padding:2px 7px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text2);}
+.expand-btn:hover{border-color:var(--blue);color:var(--blue2);}
+
+/* TAGS */
+.query-tag{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);margin:2px;}
+.problem-tag{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);margin:2px;}
+
+/* CHART */
+.chart-wrap{position:relative;height:160px;}
+
+/* MISC */
+.loading{text-align:center;padding:4rem;color:var(--text2);font-size:14px;}
+.error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:12px 16px;border-radius:10px;font-size:13px;margin:1rem 0;}
+.section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:1.25rem 0 .75rem;}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="topbar">
-    <div>
-      <h1>Search Dashboard</h1>
-      <p style="font-size:13px;color:#666;margin-top:2px">LLM evaluation analytics</p>
-    </div>
-    <a href="/" class="back-link">← Back to search</a>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <svg width="100" height="16" viewBox="0 0 796 125" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M372.049 19.9146V49.5709C372.049 56.713 373.984 62.216 377.991 65.9214C381.987 69.6165 387.915 71.4029 395.644 71.4029C403.373 71.4029 409.301 69.6165 413.297 65.9214C417.305 62.216 419.239 56.713 419.239 49.5709V19.9146H434.469V48.3365C434.469 60.5348 431.011 69.1748 424.528 74.7837C418.023 80.4114 408.339 83.107 395.644 83.107C382.95 83.107 373.266 80.4112 366.761 74.7837C360.278 69.1748 356.819 60.5349 356.819 48.3365V19.9146H372.049ZM758.731 18.1519C772.91 18.1519 784.664 20.7989 795.881 26.4986V39.4117C783.662 32.795 772.322 29.8561 759.348 29.856C749.002 29.856 740.687 31.74 734.933 35.3033C729.143 38.8895 725.966 44.171 725.966 50.8052C725.966 57.3525 729.1 62.547 734.837 66.0669C740.536 69.5631 748.783 71.4029 759.084 71.4029C766.384 71.4029 773.243 70.4231 780.013 68.4634L780.563 68.3043V55.4224H742.564V46.0113H795.793V74.7593C784.251 80.6317 773.528 83.107 759.524 83.107C744.002 83.107 731.784 80.0566 723.469 74.4849C715.191 68.9373 710.736 60.863 710.736 50.6294C710.736 40.4369 715.15 32.3611 723.309 26.8033C731.502 21.2224 743.522 18.1519 758.731 18.1519ZM337.656 19.9146V31.3541H300.186V82.0484H284.956V31.3541H247.575V19.9146H337.656ZM505.287 19.9146C512.436 19.9146 521.076 20.2072 527.917 22.8072C531.324 24.1023 534.239 25.9547 536.303 28.5875C538.359 31.2105 539.616 34.6661 539.616 39.2564C539.616 44.8018 537.767 49.3169 534.267 52.7535C530.752 56.2055 525.511 58.6252 518.643 59.8423L517.136 60.1099L540.843 82.0484H522.083L500.746 61.3296H474.11V82.0484H458.879V19.9146H505.287ZM577.806 19.9146V82.0484H562.576V19.9146H577.806ZM618.807 19.9146L674.598 67.3492V19.9146H689.828V82.0484H671.473L617.446 35.9312V82.0484H602.214V19.9146H618.807ZM474.11 31.6187V49.6255H503.788C512.945 49.6255 517.256 49.0184 520.165 47.6109L520.173 47.606C521.599 46.8933 522.669 45.9652 523.375 44.7808C524.079 43.5991 524.385 42.2213 524.385 40.6666C524.385 39.0222 524.055 37.5775 523.317 36.3511C522.623 35.1985 521.599 34.2905 520.26 33.5943L519.98 33.4537C517.066 32.1372 512.759 31.6187 503.258 31.6187H474.11Z" fill="#0f172a"/>
+        <path d="M99.9584 0C104.509 0 108.894 0.0476822 113.282 0.158151C113.265 0.167912 110.433 0.962699 109.448 1.15663C66.8824 0.277622 29.7499 6.80093 29.7499 14.299C29.7499 22.1136 69.3435 28.45 118.183 28.45C154.57 28.45 185.822 24.9305 199.395 19.9064C195.882 29.5989 152.706 37.261 99.9564 37.261C90.3886 37.261 81.1355 37.0092 72.3769 36.5386C93.9542 46.1626 111.997 58.7936 111.997 73.1567C111.997 73.2628 112.103 96.1408 112.103 124.836C111.803 124.836 111.359 118.932 111.359 118.932C106.568 27.3503 -7.02057 43.7004 0.342999 17.7744C3.18347 7.77036 47.132 0 99.9584 0Z" fill="#2563eb"/>
+      </svg>
+    </a>
+    <span class="nav-badge">Search Dashboard</span>
+  </div>
+  <a href="/" class="nav-link">← Back to Search</a>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div class="page-title">Search Analytics</div>
+    <div class="page-sub">LLM evaluation results across all queries and runs</div>
   </div>
 
-  <div id="loading" class="card loading">Loading dashboard data...</div>
-  <div id="error" class="error" style="display:none"></div>
+  <div id="loading" class="loading">Loading dashboard data...</div>
+  <div id="error" class="error-box" style="display:none"></div>
   <div id="content" style="display:none">
 
-    <div class="grid3">
-      <div class="metric"><div class="metric-label">Total runs</div><div class="metric-value" id="kpi-runs">-</div><div class="metric-sub">queries executed</div></div>
-      <div class="metric"><div class="metric-label">Avg match rate</div><div class="metric-value" id="kpi-match">-</div><div class="metric-sub">across all evaluations</div></div>
-      <div class="metric"><div class="metric-label">Profiles evaluated</div><div class="metric-value" id="kpi-profiles">-</div><div class="metric-sub">good fits: <span id="kpi-fits">-</span></div></div>
+    <!-- KPIs -->
+    <div class="grid4">
+      <div class="card">
+        <div class="kpi-label">Total Runs</div>
+        <div class="kpi-value kpi-accent" id="kpi-runs">-</div>
+        <div class="kpi-sub">queries executed</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Avg Match Rate</div>
+        <div class="kpi-value" id="kpi-match">-</div>
+        <div class="kpi-sub">across all evaluations</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Profiles Evaluated</div>
+        <div class="kpi-value" id="kpi-profiles">-</div>
+        <div class="kpi-sub">total candidates assessed</div>
+      </div>
+      <div class="card">
+        <div class="kpi-label">Good Fits</div>
+        <div class="kpi-value kpi-accent" id="kpi-fits">-</div>
+        <div class="kpi-sub">matched at 70%+</div>
+      </div>
     </div>
 
+    <!-- Domain table + Problems side by side -->
     <div class="grid2">
       <div class="card">
         <div class="card-title">Match rate by domain</div>
@@ -77,12 +143,18 @@
       </div>
     </div>
 
+    <!-- Match rate over time (compact) + daily breakdown -->
     <div class="card">
       <div class="card-title">Match rate over time</div>
       <div class="chart-wrap"><canvas id="chart"></canvas></div>
-      <div class="section-title">Daily breakdown — click to expand by domain then subdomain</div>
+
+      <div class="section-label" style="margin-top:1.25rem">Daily breakdown — click row to expand by domain → subdomain</div>
       <table>
-        <thead><tr><th>Date</th><th>Runs</th><th>Evaluated</th><th>Good fits</th><th>Match rate</th><th>Progress</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Date</th><th>Runs</th><th>Evaluated</th><th>Good fits</th><th>Match rate</th><th>Progress</th><th></th>
+          </tr>
+        </thead>
         <tbody id="daily-tbody"></tbody>
       </table>
     </div>
@@ -94,74 +166,80 @@
 var chartInstance = null;
 
 function barHtml(pct) {
-  var cls = pct >= 60 ? 'high' : pct >= 30 ? 'mid' : 'low';
+  var cls = pct >= 60 ? 'green' : pct >= 30 ? 'yellow' : 'red';
   return '<div class="bar-wrap"><div class="bar ' + cls + '" style="width:' + Math.min(pct,100) + '%"></div></div>';
 }
-
 function badge(pct) {
-  var cls = pct >= 60 ? 'success' : pct >= 30 ? 'warning' : 'danger';
+  var cls = pct >= 60 ? 'green' : pct >= 30 ? 'yellow' : 'red';
   return '<span class="badge ' + cls + '">' + pct + '%</span>';
 }
-
-function safeId(s) {
-  return s.replace(/[^a-z0-9]/gi, '_');
-}
+function sid(s) { return s.replace(/[^a-z0-9]/gi,'_'); }
 
 function toggleRows(prefix) {
-  var rows = document.querySelectorAll('[data-parent="' + prefix + '"]');
+  var rows = document.querySelectorAll('[data-parent="'+prefix+'"]');
   rows.forEach(function(r) {
-    var isVisible = r.style.display !== 'none';
-    r.style.display = isVisible ? 'none' : '';
-    // Collapse children when hiding
-    if (isVisible) {
+    var vis = r.style.display !== 'none';
+    r.style.display = vis ? 'none' : '';
+    if (vis) {
       var childId = r.getAttribute('data-id');
-      if (childId) {
-        document.querySelectorAll('[data-parent="' + childId + '"]').forEach(function(c){ c.style.display='none'; });
-      }
+      if (childId) document.querySelectorAll('[data-parent="'+childId+'"]').forEach(function(c){ c.style.display='none'; });
     }
   });
 }
 
 function renderKPIs(runs, results) {
   var total = runs.reduce(function(a,r){return a+(r.total_results||0);},0);
-  var fits = runs.reduce(function(a,r){return a+(r.good_fits||0);},0);
-  var avg = total > 0 ? Math.round(fits/total*100) : 0;
-  document.getElementById('kpi-runs').textContent = runs.length;
-  document.getElementById('kpi-match').textContent = avg + '%';
+  var fits  = runs.reduce(function(a,r){return a+(r.good_fits||0);},0);
+  var avg   = total > 0 ? Math.round(fits/total*100) : 0;
+  document.getElementById('kpi-runs').textContent     = runs.length;
+  document.getElementById('kpi-match').textContent    = avg + '%';
   document.getElementById('kpi-profiles').textContent = total.toLocaleString();
-  document.getElementById('kpi-fits').textContent = fits.toLocaleString();
+  document.getElementById('kpi-fits').textContent     = fits.toLocaleString();
 }
 
 function renderDomainTable(runs) {
+  // Group by domain → subdomain → queries
   var domains = {};
   runs.forEach(function(r) {
-    var d = r.query_domain || 'Unknown';
+    var d  = r.query_domain    || 'Unknown';
     var sd = r.query_subdomain || 'Unknown';
+    var q  = r.query           || '';
     if (!domains[d]) domains[d] = { total:0, fits:0, subs:{} };
     domains[d].total += r.total_results||0;
     domains[d].fits  += r.good_fits||0;
-    if (!domains[d].subs[sd]) domains[d].subs[sd] = { total:0, fits:0 };
+    if (!domains[d].subs[sd]) domains[d].subs[sd] = { total:0, fits:0, queries:{} };
     domains[d].subs[sd].total += r.total_results||0;
     domains[d].subs[sd].fits  += r.good_fits||0;
+    if (q) domains[d].subs[sd].queries[q] = true;
   });
 
   var html = '<table><thead><tr><th>Domain</th><th>Evaluated</th><th>Good fits</th><th>Rate</th><th>Progress</th><th></th></tr></thead><tbody>';
   Object.keys(domains).sort().forEach(function(d) {
-    var dd = domains[d];
+    var dd  = domains[d];
     var pct = dd.total > 0 ? Math.round(dd.fits/dd.total*100) : 0;
-    var did = 'dom_' + safeId(d);
-    html += '<tr class="clickable" onclick="toggleRows(\'' + did + '\')">' +
-      '<td><strong>' + d + '</strong></td>' +
-      '<td>' + dd.total + '</td><td>' + dd.fits + '</td>' +
-      '<td>' + badge(pct) + '</td><td>' + barHtml(pct) + '</td>' +
+    var did = 'dom_' + sid(d);
+    html += '<tr class="clickable" onclick="toggleRows(\''+did+'\')">' +
+      '<td><strong>'+d+'</strong></td>' +
+      '<td>'+dd.total.toLocaleString()+'</td><td>'+dd.fits.toLocaleString()+'</td>' +
+      '<td>'+badge(pct)+'</td><td>'+barHtml(pct)+'</td>' +
       '<td><button class="expand-btn">+</button></td></tr>';
+
     Object.keys(dd.subs).sort().forEach(function(sd) {
-      var s = dd.subs[sd];
-      var sp = s.total > 0 ? Math.round(s.fits/s.total*100) : 0;
-      html += '<tr class="sub-row" data-parent="' + did + '" style="display:none">' +
-        '<td style="padding-left:20px">' + sd + '</td>' +
-        '<td>' + s.total + '</td><td>' + s.fits + '</td>' +
-        '<td>' + badge(sp) + '</td><td>' + barHtml(sp) + '</td><td></td></tr>';
+      var s   = dd.subs[sd];
+      var sp  = s.total > 0 ? Math.round(s.fits/s.total*100) : 0;
+      var sid2 = did+'_'+sid(sd);
+      var queryTags = Object.keys(s.queries).map(function(q){ return '<span class="query-tag">'+q+'</span>'; }).join('');
+      html += '<tr class="sub-row" data-parent="'+did+'" data-id="'+sid2+'" style="display:none">' +
+        '<td style="padding-left:18px">'+sd+'</td>' +
+        '<td>'+s.total+'</td><td>'+s.fits+'</td>' +
+        '<td>'+badge(sp)+'</td><td>'+barHtml(sp)+'</td>' +
+        '<td><button class="expand-btn" onclick="event.stopPropagation();toggleRows(\''+sid2+'\')">queries</button></td></tr>';
+
+      // Query list row
+      if (queryTags) {
+        html += '<tr class="sub-sub-row" data-parent="'+sid2+'" style="display:none">' +
+          '<td colspan="6" style="padding-left:32px;padding-top:6px;padding-bottom:6px">'+queryTags+'</td></tr>';
+      }
     });
   });
   html += '</tbody></table>';
@@ -177,8 +255,8 @@ function renderDailyTable(runs) {
     days[day].count++;
     days[day].total += r.total_results||0;
     days[day].fits  += r.good_fits||0;
-    var d = r.query_domain||'Unknown';
-    var sd = r.query_subdomain||'Unknown';
+    var d  = r.query_domain    || 'Unknown';
+    var sd = r.query_subdomain || 'Unknown';
     if (!days[day].domains[d]) days[day].domains[d] = { total:0, fits:0, subs:{} };
     days[day].domains[d].total += r.total_results||0;
     days[day].domains[d].fits  += r.good_fits||0;
@@ -189,32 +267,32 @@ function renderDailyTable(runs) {
 
   var rows = '';
   Object.keys(days).sort().reverse().forEach(function(day) {
-    var dd = days[day];
+    var dd  = days[day];
     var pct = dd.total > 0 ? Math.round(dd.fits/dd.total*100) : 0;
-    var dayId = 'day_' + safeId(day);
-    rows += '<tr class="clickable" onclick="toggleRows(\'' + dayId + '\')">' +
-      '<td><strong>' + day + '</strong></td><td>' + dd.count + '</td>' +
-      '<td>' + dd.total + '</td><td>' + dd.fits + '</td>' +
-      '<td>' + badge(pct) + '</td><td>' + barHtml(pct) + '</td>' +
+    var dayId = 'day_'+sid(day);
+    rows += '<tr class="clickable" onclick="toggleRows(\''+dayId+'\')">' +
+      '<td><strong>'+day+'</strong></td><td>'+dd.count+'</td>' +
+      '<td>'+dd.total.toLocaleString()+'</td><td>'+dd.fits.toLocaleString()+'</td>' +
+      '<td>'+badge(pct)+'</td><td>'+barHtml(pct)+'</td>' +
       '<td><button class="expand-btn">+</button></td></tr>';
 
     Object.keys(dd.domains).sort().forEach(function(d) {
-      var dom = dd.domains[d];
-      var dp = dom.total > 0 ? Math.round(dom.fits/dom.total*100) : 0;
-      var domId = dayId + '_' + safeId(d);
-      rows += '<tr class="sub-row" data-parent="' + dayId + '" data-id="' + domId + '" style="display:none">' +
-        '<td style="padding-left:16px;font-weight:500">' + d + '</td><td>-</td>' +
-        '<td>' + dom.total + '</td><td>' + dom.fits + '</td>' +
-        '<td>' + badge(dp) + '</td><td>' + barHtml(dp) + '</td>' +
-        '<td><button class="expand-btn" onclick="event.stopPropagation();toggleRows(\'' + domId + '\')">+</button></td></tr>';
+      var dom  = dd.domains[d];
+      var dp   = dom.total > 0 ? Math.round(dom.fits/dom.total*100) : 0;
+      var domId = dayId+'_'+sid(d);
+      rows += '<tr class="sub-row" data-parent="'+dayId+'" data-id="'+domId+'" style="display:none">' +
+        '<td style="padding-left:16px;font-weight:500">'+d+'</td><td>-</td>' +
+        '<td>'+dom.total+'</td><td>'+dom.fits+'</td>' +
+        '<td>'+badge(dp)+'</td><td>'+barHtml(dp)+'</td>' +
+        '<td><button class="expand-btn" onclick="event.stopPropagation();toggleRows(\''+domId+'\')">+</button></td></tr>';
 
       Object.keys(dom.subs).sort().forEach(function(sd) {
         var sub = dom.subs[sd];
-        var sp = sub.total > 0 ? Math.round(sub.fits/sub.total*100) : 0;
-        rows += '<tr class="sub-sub-row" data-parent="' + domId + '" style="display:none">' +
-          '<td style="padding-left:32px">' + sd + '</td><td>-</td>' +
-          '<td>' + sub.total + '</td><td>' + sub.fits + '</td>' +
-          '<td>' + badge(sp) + '</td><td>' + barHtml(sp) + '</td><td></td></tr>';
+        var sp  = sub.total > 0 ? Math.round(sub.fits/sub.total*100) : 0;
+        rows += '<tr class="sub-sub-row" data-parent="'+domId+'" style="display:none">' +
+          '<td style="padding-left:30px">'+sd+'</td><td>-</td>' +
+          '<td>'+sub.total+'</td><td>'+sub.fits+'</td>' +
+          '<td>'+badge(sp)+'</td><td>'+barHtml(sp)+'</td><td></td></tr>';
       });
     });
   });
@@ -231,20 +309,27 @@ function renderChart(runs) {
     days[day].fits  += r.good_fits||0;
   });
   var labels = Object.keys(days).sort();
-  var data = labels.map(function(d){ return days[d].total > 0 ? Math.round(days[d].fits/days[d].total*100) : 0; });
+  var data   = labels.map(function(d){ return days[d].total > 0 ? Math.round(days[d].fits/days[d].total*100) : 0; });
   if (chartInstance) chartInstance.destroy();
   chartInstance = new Chart(document.getElementById('chart').getContext('2d'), {
     type: 'line',
     data: {
       labels: labels,
-      datasets: [{ label: 'Match rate %', data: data, borderColor: '#1a56cc', backgroundColor: 'rgba(26,86,204,0.08)', tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: '#1a56cc' }]
+      datasets: [{
+        label: 'Match rate %', data: data,
+        borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)',
+        tension: 0.4, fill: true, pointRadius: 5, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2,
+      }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { min:0, max:100, ticks: { callback: function(v){ return v+'%'; }, font:{size:11} }, grid:{color:'#f0f0f0'} },
-        x: { ticks: { font:{size:11} }, grid:{display:false} }
+        y: { min:0, max:100,
+          ticks: { callback: function(v){ return v+'%'; }, color:'#475569', font:{size:11} },
+          grid: { color:'#1e2a42' }
+        },
+        x: { ticks: { color:'#475569', font:{size:11} }, grid: { display:false } }
       }
     }
   });
@@ -252,48 +337,47 @@ function renderChart(runs) {
 
 function renderProblems(results) {
   var noFit = results.filter(function(r){ return r.match === false && r.reason; });
-  if (!noFit.length) { document.getElementById('problems').innerHTML = '<p style="font-size:13px;color:#888">No rejection data yet.</p>'; return; }
-
+  if (!noFit.length) {
+    document.getElementById('problems').innerHTML = '<p style="font-size:13px;color:var(--text2)">No rejection data yet.</p>';
+    return;
+  }
   var reasons = noFit.map(function(r){ return r.reason.toLowerCase(); });
   var patterns = [
-    { label: 'Insufficient years of experience', kw: ['insufficient','only 1yr','only 2yr','only 3yr','lacks experience','less than','below required'] },
-    { label: 'Missing required skill',            kw: ['no evidence of','no python','no django','no react','no javascript','skill not','not found','absent','missing'] },
-    { label: 'Wrong domain / role',               kw: ['not a','unrelated','different role','adjacent','not directly','outside the scope'] },
-    { label: 'Junior / entry level',              kw: ['junior','entry','intern','beginner','limited experience','early career'] },
-    { label: 'Education mismatch',                kw: ['no phd','no degree','no doctorate','education mismatch','does not hold'] },
-    { label: 'Location mismatch',                 kw: ['not from us','outside us','non-us','location','not based'] },
-    { label: 'Vague / limited evidence',          kw: ['limited evidence','no project','unclear','vague','insufficient detail'] },
+    { label:'Insufficient years of experience', kw:['insufficient','only 1yr','only 2yr','only 3yr','lacks experience','less than','below required','limited experience'] },
+    { label:'Missing required skill',            kw:['no evidence of','no python','no django','no react','no javascript','skill not','not found','absent','missing','does not have'] },
+    { label:'Wrong domain / role',               kw:['not a','unrelated','different role','adjacent','not directly','outside the scope','irrelevant'] },
+    { label:'Junior / entry level',              kw:['junior','entry','intern','beginner','early career','no professional'] },
+    { label:'Education mismatch',                kw:['no phd','no degree','no doctorate','education mismatch','does not hold','not completed','pursuing'] },
+    { label:'Location mismatch',                 kw:['not from us','outside us','non-us','not based','location'] },
+    { label:'Vague / limited evidence',          kw:['limited evidence','no project','unclear','vague','insufficient detail','no portfolio'] },
   ];
 
   var counts = patterns.map(function(p) {
     var n = reasons.filter(function(r){ return p.kw.some(function(k){ return r.indexOf(k)!==-1; }); }).length;
-    return { label: p.label, count: n, pct: Math.round(n/noFit.length*100) };
+    return { label:p.label, count:n, pct:Math.round(n/noFit.length*100) };
   }).filter(function(p){ return p.count > 0; }).sort(function(a,b){ return b.count-a.count; });
 
   var html = '<table><thead><tr><th>Problem</th><th>Count</th><th>% of rejections</th><th></th></tr></thead><tbody>';
   counts.forEach(function(p) {
-    html += '<tr><td>' + p.label + '</td><td>' + p.count + '</td><td>' + p.pct + '%</td><td>' + barHtml(p.pct) + '</td></tr>';
+    html += '<tr><td>'+p.label+'</td><td>'+p.count+'</td><td>'+p.pct+'%</td><td>'+barHtml(p.pct)+'</td></tr>';
   });
   html += '</tbody></table>';
 
-  // Keyword cloud
   var wordMap = {};
-  reasons.slice(0,200).forEach(function(r) {
+  reasons.slice(0,300).forEach(function(r) {
     r.split(/[\s,;.!?()\[\]]+/).forEach(function(w) {
       w = w.replace(/[^a-z]/g,'');
-      var stop = ['with','that','this','from','have','only','than','more','less','does','years','experience','skills','their','which','there','based','found','match','good','does','candidate','profile'];
-      if (w.length > 4 && stop.indexOf(w) === -1) wordMap[w] = (wordMap[w]||0)+1;
+      var stop = ['with','that','this','from','have','only','than','more','less','does','years','experience','skills','their','which','there','based','found','match','good','candidate','profile','query','required','requirement'];
+      if (w.length > 4 && stop.indexOf(w)===-1) wordMap[w]=(wordMap[w]||0)+1;
     });
   });
-  var topWords = Object.keys(wordMap).sort(function(a,b){return wordMap[b]-wordMap[a];}).slice(0,18);
-  html += '<div style="margin-top:1rem"><div style="font-size:11px;color:#888;margin-bottom:6px">Common keywords in rejections</div>';
-  topWords.forEach(function(w){ html += '<span class="problem-tag">' + w + ' (' + wordMap[w] + ')</span>'; });
+  var topWords = Object.keys(wordMap).sort(function(a,b){return wordMap[b]-wordMap[a];}).slice(0,16);
+  html += '<div style="margin-top:1rem"><div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Common keywords</div>';
+  topWords.forEach(function(w){ html += '<span class="problem-tag">'+w+' ('+wordMap[w]+')</span>'; });
   html += '</div>';
-
   document.getElementById('problems').innerHTML = html;
 }
 
-// Auto-load on page open
 window.addEventListener('load', async function() {
   try {
     var res = await fetch('/api/dashboard');
