@@ -31,48 +31,36 @@ export default async function handler(req, res) {
   }
 
   function extractWorkExperience(p) {
-    const we = p.workExperience || [];
-    return we.map(w =>
+    return (p.workExperience || []).map(w =>
       `${w.position || ""} at ${w.company || ""} (${w.durationYears || "?"}yrs, ${w.employmentType || ""}): ${(w.description || "").slice(0, 300)}`
     ).join("\n") || "—";
   }
 
   function extractEducation(p) {
-    const ed = p.education || [];
-    return ed.map(e =>
+    return (p.education || []).map(e =>
       `${e.degree || e.level || ""} at ${e.school || ""}`
     ).join("; ") || "—";
   }
 
   function extractProjects(p) {
-    const pr = p.projects || [];
-    return pr.map(pr =>
+    return (p.projects || []).map(pr =>
       `${pr.name || ""}: ${(pr.description || "").slice(0, 200)}`
     ).join("\n") || "—";
   }
 
-  function extractCertifications(p) {
-    const c = p.certifications || [];
-    return c.map(c => c.name || c.title || JSON.stringify(c)).join(", ") || "—";
-  }
-
-  function extractPublications(p) {
-    const pub = p.publications || [];
-    return pub.map(p => p.title || p.name || JSON.stringify(p)).join(", ") || "—";
-  }
-
-  function extractLanguages(p) {
-    const l = p.languages || [];
-    return l.map(l => typeof l === "string" ? l : l.name || l.language || JSON.stringify(l)).join(", ") || "—";
+  function extractList(arr, fields) {
+    return (arr || []).map(item => {
+      if (typeof item === "string") return item;
+      for (const f of fields) if (item[f]) return item[f];
+      return JSON.stringify(item);
+    }).join(", ") || "—";
   }
 
   const indexMap = {};
   const text = profiles.map((p, batchIndex) => {
     const globalIdx = p._idx ?? batchIndex;
     indexMap[batchIndex] = globalIdx;
-
     const name = p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim() || "Unknown";
-
     return `
 --- CANDIDATE [${batchIndex}] ---
 Name: ${name}
@@ -80,39 +68,58 @@ Role: ${p.role || p.designation || p.title || "—"}
 Location: ${[p.city, p.country, p.continent].filter(Boolean).join(", ") || "—"}
 Years of Experience: ${p.yearsOfExperience || p.totalExperience || "—"}
 Availability: ${p.availability || "—"}
-
 Skills: ${extractSkills(p)}
-
 Work Experience:
 ${extractWorkExperience(p)}
-
 Education: ${extractEducation(p)}
-
 Projects:
 ${extractProjects(p)}
-
-Certifications: ${extractCertifications(p)}
-Publications: ${extractPublications(p)}
-Languages: ${extractLanguages(p)}
-
+Certifications: ${extractList(p.certifications, ["name", "title"])}
+Publications: ${extractList(p.publications, ["title", "name"])}
+Languages: ${extractList(p.languages, ["name", "language"])}
 Resume:
 ${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
 `.trim();
   }).join("\n\n");
 
+  // Domain/subdomain classification list
+  const domainContext = `
+Domain and subdomain reference:
+- Domain "SWE Bench" → subdomains: Python, JavaScript, Java, C++, Rust, Ruby, Go, C#, DE/DS
+- Domain "Python/FastAPI BE Developer" → subdomains: FastAPI Developer
+- Domain "Prompt & Verifier Role" → subdomains: Prompt & Verifier Role
+- Domain "Function Calling - Agentic Annotators" → subdomains: Agentic completion tasks, Agent Function call, Agentic trainer
+- Domain "Function Calling - Agentic Annotators (Multilingual)" → subdomains: Multilingual Agentic
+- Domain "MLE Bench" → subdomains: ML Eng, Data Analysts
+- Domain "STEM (Global)" → subdomains: Physics, Chemistry, Biology, Math
+- Domain "STEM (US)" → subdomains: Physics, Chemistry, Biology, Math
+- Domain "Multi-Modal" → subdomains: Video Annotation, Vision Document Understanding, Vision Image Understanding, Content, Business Analyst, Business Analyst + Multi-Lingual, Audio - Studio Quality
+- Domain "Unknown" → if none of the above match
+`.trim();
+
   const prompt = `You are an expert talent recruiter evaluating candidates for the following search query: "${query}".
 
-For each candidate, decide if they are a good fit (>=70% match).
+First, classify this query into a domain and subdomain using this reference:
+${domainContext}
+
+Then, for each candidate, decide if they are a good fit (>=70% match).
 
 Rules:
 - Base your evaluation strictly on what is present in the candidate data — do not fabricate facts.
 - Good fit (match: true): candidate clearly meets the query requirements. State specifically which skills, experience, or background supports this.
-- No fit (match: false): clearly state what is missing or insufficient (e.g. "only 1yr Python experience, query requires 5+", "no Django experience found").
+- No fit (match: false): clearly state what is missing or insufficient (e.g. "only 1yr Python, query requires 5+", "no Django experience found").
 - Be concise but specific. No vague praise or filler.
 - No preamble, no trailing commentary.
 
-Reply ONLY with a JSON array, one object per candidate, in order:
-[{"index":0,"match":true,"reason":"concrete reason"},...]
+Reply ONLY with this JSON structure:
+{
+  "query_domain": "domain name",
+  "query_subdomain": "subdomain name",
+  "results": [
+    {"index": 0, "match": true, "reason": "concrete reason"},
+    ...
+  ]
+}
 
 Candidates:
 ${text}`;
@@ -138,27 +145,33 @@ ${text}`;
     const raw = llmData?.choices?.[0]?.message?.content || "";
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
 
-    const remapped = parsed.map(item => ({
+    const queryDomain = parsed.query_domain || "Unknown";
+    const querySubdomain = parsed.query_subdomain || "Unknown";
+
+    const remapped = (parsed.results || []).map(item => ({
       ...item,
       index: indexMap[item.index] ?? item.index,
+      query_domain: queryDomain,
+      query_subdomain: querySubdomain,
     }));
 
-    // Save to Supabase if configured
+    // Save to Supabase
     if (supabaseUrl && supabaseKey && runId) {
       const rows = remapped.map(item => {
-        const p = profiles.find(pr => (pr._idx ?? 0) === item.index) || profiles[0];
-        const name = p ? (p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim()) : "Unknown";
+        const p = profiles.find(pr => (pr._idx ?? 0) === item.index) || profiles.find((_, j) => indexMap[j] === item.index) || {};
+        const name = p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim() || "Unknown";
         return {
           run_id: runId,
           query,
+          candidate_id: p.id || null,
           candidate_name: name,
-          candidate_idx: item.index,
+          position: item.index + 1,
           match: item.match,
           reason: item.reason,
         };
       });
 
-      await fetch(`${supabaseUrl}/rest/v1/evaluations`, {
+      await fetch(`${supabaseUrl}/rest/v1/run_results`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -170,7 +183,7 @@ ${text}`;
       });
     }
 
-    return res.status(200).json({ results: remapped });
+    return res.status(200).json({ results: remapped, query_domain: queryDomain, query_subdomain: querySubdomain });
   } catch (err) {
     return res.status(500).json({ error: "LLM error", details: err.message });
   }
