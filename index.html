@@ -28,26 +28,28 @@
   .metric { background: #f8f8f8; border-radius: 8px; padding: 10px 14px; }
   .metric-label { font-size: 11px; color: #888; margin-bottom: 3px; }
   .metric-value { font-size: 22px; font-weight: 600; }
-  .metric-value.small { font-size: 13px; }
+  .metric-value.small { font-size: 13px; word-break: break-all; }
   .tabs { display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 1rem; }
   .tab { padding: 10px 18px; font-size: 13px; cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; color: #666; }
   .tab.active { border-bottom-color: #111; color: #111; font-weight: 500; }
   .profiles-list { max-height: 500px; overflow-y: auto; }
   .profile { border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; }
   .profile.fit { border-color: #28a745; }
+  .profile.nofit { border-color: #e0e0e0; }
   .profile-header { display: flex; align-items: center; gap: 10px; }
-  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; background: #f0f0f0; color: #666; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .avatar.pending { background: #f0f0f0; color: #666; }
   .avatar.fit { background: #d4edda; color: #155724; }
   .avatar.nofit { background: #f8d7da; color: #721c24; }
   .profile-name { font-weight: 500; font-size: 13px; }
   .profile-title { font-size: 12px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .profile-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #666; display: none; line-height: 1.6; }
+  .profile-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #666; display: none; line-height: 1.8; }
   .profile-details.open { display: block; }
   .toggle-btn { font-size: 11px; padding: 2px 8px; background: transparent; color: #666; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
-  .log { font-family: monospace; font-size: 11px; color: #555; max-height: 300px; overflow-y: auto; }
-  .log div { padding: 1px 0; }
+  .log-box { font-family: monospace; font-size: 11px; color: #555; max-height: 300px; overflow-y: auto; }
+  .log-box div { padding: 1px 0; }
   .error-box { background: #f8d7da; color: #721c24; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; }
-  .history-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 12px; }
+  .history-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 12px; }
   .history-row:last-child { border-bottom: none; }
   .flex-center { display: flex; align-items: center; gap: 8px; }
   #status-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
@@ -100,7 +102,7 @@
       <div class="profiles-list" id="profiles-list"></div>
     </div>
     <div id="tab-log" style="display:none">
-      <div class="log" id="log-list"></div>
+      <div class="log-box" id="log-list"></div>
     </div>
   </div>
 </div>
@@ -110,6 +112,15 @@ const PROXY = window.location.origin;
 let profiles = [];
 let evaluations = {};
 let history = [];
+
+function extractSkills(p) {
+  const raw = p.skills || p.topSkills || p.primarySkills || [];
+  return raw.map(s => {
+    if (typeof s === 'string') return s;
+    if (s && typeof s === 'object') return s.name || s.skill || s.title || '';
+    return String(s);
+  }).filter(Boolean).slice(0, 12).join(', ') || '—';
+}
 
 function setStatus(s) {
   const map = {
@@ -152,22 +163,24 @@ function renderProfiles() {
   profiles.slice(0, 100).forEach((p, i) => {
     const ev = evaluations[i];
     const fit = ev?.match;
-    const pending = !ev;
+    const pending = ev === undefined;
     const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
-    const skills = (p.skills || p.topSkills || []).slice(0, 12).join(', ') || '—';
+    const skills = extractSkills(p);
     const exp = p.totalExperience || p.yearsOfExperience || '?';
+    const title = p.title || p.designation || '—';
+
     const div = document.createElement('div');
-    div.className = 'profile' + (fit ? ' fit' : '');
+    div.className = 'profile' + (pending ? '' : fit ? ' fit' : ' nofit');
     div.innerHTML = `
       <div class="profile-header">
-        <div class="avatar ${pending ? '' : fit ? 'fit' : 'nofit'}">${i+1}</div>
+        <div class="avatar ${pending ? 'pending' : fit ? 'fit' : 'nofit'}">${i+1}</div>
         <div style="flex:1;min-width:0">
           <div class="profile-name">${name}</div>
-          <div class="profile-title">${p.title || p.designation || '—'}</div>
+          <div class="profile-title">${title}</div>
         </div>
         <span class="badge ${pending ? 'neutral' : fit ? 'success' : 'danger'}">${pending ? 'pending' : fit ? 'fit' : 'no fit'}</span>
         <button class="toggle-btn" onclick="
-          var d=this.parentElement.nextElementSibling;
+          var d=this.parentElement.parentElement.querySelector('.profile-details');
           d.classList.toggle('open');
           this.textContent=d.classList.contains('open')?'▲':'▼';
         ">▼</button>
@@ -222,9 +235,12 @@ async function run() {
   if (!token) { showError('JWT token is required.'); return; }
   if (!query)  { showError('Query is required.'); return; }
 
-  profiles = []; evaluations = {};
+  // Reset state
+  profiles = [];
+  evaluations = {};
   document.getElementById('log-list').innerHTML = '';
   document.getElementById('profiles-list').innerHTML = '';
+  document.getElementById('metrics').style.display = 'none';
   document.getElementById('results-card').style.display = '';
   setStatus('running');
   addLog(`Searching: "${query}" (pageSize=${pageSize})`);
@@ -243,7 +259,7 @@ async function run() {
     showError(e.message); addLog(`Search error: ${e.message}`); setStatus('error'); return;
   }
 
-  // 2. Evaluate via proxy
+  // 2. Evaluate
   setStatus('evaluating');
   addLog('Evaluating up to 100 profiles with LLM…');
 
