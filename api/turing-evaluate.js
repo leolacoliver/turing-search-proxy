@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -27,6 +29,17 @@ export default async function handler(req, res) {
     vettingFlows: [],
   };
 
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+    "Accept": "application/json",
+    "Origin": "https://search.turing.com",
+    "Referer": "https://search.turing.com/search",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    "cache-control": "no-cache",
+    "pragma": "no-cache",
+  };
+
   // Step 1: Smart search to get candidates + decomposition
   let talents = [];
   let decomposition = null;
@@ -34,14 +47,7 @@ export default async function handler(req, res) {
   try {
     const searchRes = await fetch("https://search.turing.com/api/talent/search/smart", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-        "Accept": "application/json",
-        "Origin": "https://search.turing.com",
-        "Referer": "https://search.turing.com/search",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
+      headers,
       body: JSON.stringify({ query, page: 1, pageSize, filters }),
     });
 
@@ -54,30 +60,45 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Search error", details: err.message });
   }
 
-  if (!talents.length) return res.status(200).json({ talents: [], evaluations: [] });
+  if (!talents.length) return res.status(200).json({ talents: [], evaluations: [], decomposition: null });
 
-  // Step 2: Call Turing's evaluate endpoint
+  // Step 2: Call Turing's evaluate endpoint with exact same payload format
   try {
+    const evalPayload = { query, filters, decomposition };
+
     const evalRes = await fetch("https://search.turing.com/api/talent/search/evaluate", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-        "Accept": "application/json",
-        "Origin": "https://search.turing.com",
-        "Referer": "https://search.turing.com/search",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-      body: JSON.stringify({ query, filters, decomposition }),
+      headers,
+      body: JSON.stringify(evalPayload),
     });
 
-    const evalData = await evalRes.json();
-    if (!evalRes.ok) return res.status(evalRes.status).json({ error: "Evaluate failed", details: evalData });
+    const rawText = await evalRes.text();
 
-    // evalData is array of { rank, resume_id, name, verdict, reason }
-    const evaluations = Array.isArray(evalData) ? evalData : (evalData.results || evalData.talents || []);
+    // Try to parse as JSON first
+    let evaluations = [];
+    try {
+      const parsed = JSON.parse(rawText);
+      evaluations = Array.isArray(parsed) ? parsed : (parsed.results || parsed.talents || parsed.data || []);
+    } catch (e) {
+      // If not JSON, might be CSV or streaming — return raw for debugging
+      return res.status(200).json({
+        talents,
+        evaluations: [],
+        decomposition,
+        _raw: rawText.slice(0, 2000),
+        _evalStatus: evalRes.status,
+        _parseError: e.message,
+      });
+    }
 
-    return res.status(200).json({ talents, evaluations, decomposition });
+    return res.status(200).json({
+      talents,
+      evaluations,
+      decomposition,
+      _evalStatus: evalRes.status,
+      _evalCount: evaluations.length,
+    });
+
   } catch (err) {
     return res.status(500).json({ error: "Evaluate error", details: err.message });
   }
