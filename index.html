@@ -5,32 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Turing · Search Tester</title>
 <style>
-:root {
-  --bg:#08090f; --bg2:#0f1220; --bg3:#161b2e; --border:#1e2a42;
-  --blue:#2563eb; --blue2:#3b82f6; --green:#10b981; --yellow:#f59e0b; --red:#ef4444;
-  --text:#f1f5f9; --text2:#94a3b8; --text3:#475569;
-}
+:root{--bg:#08090f;--bg2:#0f1220;--bg3:#161b2e;--border:#1e2a42;--blue:#2563eb;--blue2:#3b82f6;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--text:#f1f5f9;--text2:#94a3b8;--text3:#475569;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-
-/* NAV */
 nav{background:#fff;border-bottom:3px solid var(--blue);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;position:sticky;top:0;z-index:100;}
 .nav-left{display:flex;align-items:center;gap:16px;}
 .nav-badge{font-size:11px;background:#eff6ff;color:var(--blue);padding:3px 10px;border-radius:99px;font-weight:600;}
-nav a.nav-link{font-size:13px;color:#374151;text-decoration:none;}
-nav a.nav-link:hover{color:var(--blue);}
-
-/* LAYOUT */
+nav a{font-size:13px;color:#374151;text-decoration:none;}
+nav a:hover{color:var(--blue);}
 .page{max-width:960px;margin:0 auto;padding:2rem 1.5rem;}
-.page-header{margin-bottom:1.5rem;}
 .page-title{font-size:22px;font-weight:700;margin-bottom:3px;}
-.page-sub{font-size:13px;color:var(--text2);}
-
-/* CARD */
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem;}
 .card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:1rem;}
-
-/* FORM */
 label{font-size:12px;color:var(--text2);display:block;margin-bottom:5px;}
 textarea,input,select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg3);color:var(--text);outline:none;}
 textarea:focus,input:focus,select:focus{border-color:var(--blue);}
@@ -38,103 +25,77 @@ textarea{resize:vertical;font-family:monospace;}
 select option{background:var(--bg3);}
 .row{display:grid;grid-template-columns:1fr 150px;gap:12px;}
 .field{margin-bottom:10px;}
-
-/* BUTTON */
-.btn{padding:10px 22px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
+.btn{padding:10px 22px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
 .btn:hover{background:var(--blue2);}
 .btn:disabled{background:var(--text3);cursor:not-allowed;}
-
-/* BADGE */
 .badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;}
 .badge.neutral{background:var(--bg3);color:var(--text2);}
 .badge.info{background:rgba(37,99,235,.15);color:var(--blue2);}
 .badge.warning{background:rgba(245,158,11,.15);color:#fbbf24;}
 .badge.success{background:rgba(16,185,129,.15);color:#34d399;}
 .badge.danger{background:rgba(239,68,68,.15);color:#f87171;}
-
-/* SUMMARY TABLE */
 .summary-table{width:100%;border-collapse:collapse;font-size:13px;}
 .summary-table th{text-align:left;font-size:10px;color:var(--text3);font-weight:600;padding:0 10px 8px 0;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;}
 .summary-table td{padding:10px 10px 10px 0;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
 .summary-table tr:last-child td{border-bottom:none;}
-
-/* PROGRESS */
 .bar-wrap{background:var(--border);border-radius:99px;height:5px;min-width:80px;display:inline-block;width:100%;}
 .bar{border-radius:99px;height:5px;}
 .bar.green{background:var(--green);}
 .bar.blue{background:var(--blue);}
-
-/* PANELS */
 .query-panels{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;}
 .query-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
-.query-panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;}
-.query-panel-header:hover{background:var(--bg3);}
-.query-panel-title{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.query-panel-body{display:none;padding:12px 16px;}
-.query-panel-body.open{display:block;}
+.qph{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none;}
+.qph:hover{background:var(--bg3);}
+.qpt{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.qpb{display:none;padding:12px 16px;}
+.qpb.open{display:block;}
 .mini-log{font-family:monospace;font-size:10px;color:var(--text3);max-height:80px;overflow-y:auto;margin-bottom:10px;background:var(--bg);padding:6px 8px;border-radius:6px;border:1px solid var(--border);}
 .profiles-mini{max-height:400px;overflow-y:auto;}
-
-/* PROFILE CARD */
-.profile-card{border-radius:8px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border);background:var(--bg3);}
-.profile-card.fit{border-color:var(--green);background:rgba(16,185,129,.05);}
-.profile-card.nofit{border-color:var(--border);}
-.profile-card-header{display:flex;align-items:center;gap:8px;}
-.avatar-mini{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
-.avatar-mini.pending{background:var(--bg);color:var(--text3);}
-.avatar-mini.fit{background:rgba(16,185,129,.2);color:#34d399;}
-.avatar-mini.nofit{background:rgba(239,68,68,.2);color:#f87171;}
-.profile-name{font-weight:500;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
-.profile-skills{font-size:11px;color:var(--text3);margin-top:2px;}
-
-/* REASON BOX */
-.reason-box{margin-top:7px;padding:7px 10px;border-radius:6px;font-size:11px;line-height:1.5;}
-.reason-box.fit{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2);}
-.reason-box.nofit{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.15);}
-.reason-label{font-weight:700;margin-bottom:2px;}
-
-/* REVIEW */
-.review-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
-.review-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px;}
-.review-textarea{width:100%;min-height:60px;max-height:200px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;outline:none;line-height:1.5;}
-.review-textarea:focus{border-color:var(--blue);}
+.pc{border-radius:8px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border);background:var(--bg3);}
+.pc.fit{border-color:var(--green);background:rgba(16,185,129,.05);}
+.pch{display:flex;align-items:center;gap:8px;}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.av.pending{background:var(--bg);color:var(--text3);}
+.av.fit{background:rgba(16,185,129,.2);color:#34d399;}
+.av.nofit{background:rgba(239,68,68,.2);color:#f87171;}
+.pn{font-weight:500;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
+.ps{font-size:11px;color:var(--text3);margin-top:2px;}
+.rb{margin-top:7px;padding:7px 10px;border-radius:6px;font-size:11px;line-height:1.5;}
+.rb.fit{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2);}
+.rb.nofit{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.15);}
+.rbl{font-weight:700;margin-bottom:2px;}
+.review-section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.review-section label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--text3);margin-bottom:6px;}
+.review-section textarea{min-height:60px;max-height:200px;font-family:inherit;font-size:12px;}
 .review-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
-.review-btn{padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;}
+.review-row input{width:140px;font-size:12px;padding:6px 10px;}
+.review-btn{padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .review-btn:hover{background:var(--blue2);}
 .review-btn:disabled{background:var(--text3);cursor:not-allowed;}
-.review-sent{font-size:11px;color:#34d399;display:none;}
-.reviewer-input{padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);width:140px;outline:none;}
-.reviewer-input:focus{border-color:var(--blue);}
-.review-textarea{width:100%;min-height:60px;max-height:200px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;outline:none;line-height:1.5;margin-top:2px;}
-.review-textarea:focus{border-color:var(--blue);}
-
-/* MISC */
+.saved-msg{font-size:11px;color:#34d399;display:none;}
 .error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:10px;}
 .run-id-box{font-size:11px;color:var(--text3);margin-top:8px;font-family:monospace;}
-.section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:1.25rem 0 .75rem;}
 #status-bar{display:flex;align-items:center;gap:10px;margin-top:12px;}
+.section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:1.25rem 0 .75rem;}
 </style>
 </head>
 <body>
-
 <nav>
   <div class="nav-left">
-    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
-      <svg width="100" height="16" viewBox="0 0 796 125" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
+      <svg width="90" height="14" viewBox="0 0 796 125" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M372.049 19.9146V49.5709C372.049 56.713 373.984 62.216 377.991 65.9214C381.987 69.6165 387.915 71.4029 395.644 71.4029C403.373 71.4029 409.301 69.6165 413.297 65.9214C417.305 62.216 419.239 56.713 419.239 49.5709V19.9146H434.469V48.3365C434.469 60.5348 431.011 69.1748 424.528 74.7837C418.023 80.4114 408.339 83.107 395.644 83.107C382.95 83.107 373.266 80.4112 366.761 74.7837C360.278 69.1748 356.819 60.5349 356.819 48.3365V19.9146H372.049ZM758.731 18.1519C772.91 18.1519 784.664 20.7989 795.881 26.4986V39.4117C783.662 32.795 772.322 29.8561 759.348 29.856C749.002 29.856 740.687 31.74 734.933 35.3033C729.143 38.8895 725.966 44.171 725.966 50.8052C725.966 57.3525 729.1 62.547 734.837 66.0669C740.536 69.5631 748.783 71.4029 759.084 71.4029C766.384 71.4029 773.243 70.4231 780.013 68.4634L780.563 68.3043V55.4224H742.564V46.0113H795.793V74.7593C784.251 80.6317 773.528 83.107 759.524 83.107C744.002 83.107 731.784 80.0566 723.469 74.4849C715.191 68.9373 710.736 60.863 710.736 50.6294C710.736 40.4369 715.15 32.3611 723.309 26.8033C731.502 21.2224 743.522 18.1519 758.731 18.1519ZM337.656 19.9146V31.3541H300.186V82.0484H284.956V31.3541H247.575V19.9146H337.656ZM505.287 19.9146C512.436 19.9146 521.076 20.2072 527.917 22.8072C531.324 24.1023 534.239 25.9547 536.303 28.5875C538.359 31.2105 539.616 34.6661 539.616 39.2564C539.616 44.8018 537.767 49.3169 534.267 52.7535C530.752 56.2055 525.511 58.6252 518.643 59.8423L517.136 60.1099L540.843 82.0484H522.083L500.746 61.3296H474.11V82.0484H458.879V19.9146H505.287ZM577.806 19.9146V82.0484H562.576V19.9146H577.806ZM618.807 19.9146L674.598 67.3492V19.9146H689.828V82.0484H671.473L617.446 35.9312V82.0484H602.214V19.9146H618.807ZM474.11 31.6187V49.6255H503.788C512.945 49.6255 517.256 49.0184 520.165 47.6109L520.173 47.606C521.599 46.8933 522.669 45.9652 523.375 44.7808C524.079 43.5991 524.385 42.2213 524.385 40.6666C524.385 39.0222 524.055 37.5775 523.317 36.3511C522.623 35.1985 521.599 34.2905 520.26 33.5943L519.98 33.4537C517.066 32.1372 512.759 31.6187 503.258 31.6187H474.11Z" fill="#0f172a"/>
         <path d="M99.9584 0C104.509 0 108.894 0.0476822 113.282 0.158151C113.265 0.167912 110.433 0.962699 109.448 1.15663C66.8824 0.277622 29.7499 6.80093 29.7499 14.299C29.7499 22.1136 69.3435 28.45 118.183 28.45C154.57 28.45 185.822 24.9305 199.395 19.9064C195.882 29.5989 152.706 37.261 99.9564 37.261C90.3886 37.261 81.1355 37.0092 72.3769 36.5386C93.9542 46.1626 111.997 58.7936 111.997 73.1567C111.997 73.2628 112.103 96.1408 112.103 124.836C111.803 124.836 111.359 118.932 111.359 118.932C106.568 27.3503 -7.02057 43.7004 0.342999 17.7744C3.18347 7.77036 47.132 0 99.9584 0Z" fill="#2563eb"/>
       </svg>
     </a>
     <span class="nav-badge">Search Tester</span>
   </div>
-  <a href="/dashboard.html" class="nav-link">View Dashboard →</a>
+  <a href="/dashboard.html">View Dashboard →</a>
 </nav>
 
 <div class="page">
-  <div class="page-header">
-    <div class="page-title">Search Tester</div>
-    <div class="page-sub">Run queries against the Turing talent API and evaluate profile fits with an LLM.</div>
-  </div>
+  <div class="page-title">Search Tester</div>
+  <div class="page-sub">Run queries against the Turing talent API and evaluate profile fits with an LLM.</div>
 
   <div class="card">
     <div class="row">
@@ -183,258 +144,315 @@ var PROXY = window.location.origin;
 var state = {};
 
 function extractSkills(p) {
-  var raw = p.skills||p.topSkills||p.primarySkills||[];
-  return raw.map(function(s){
-    if(typeof s==='string') return s;
-    if(s&&typeof s==='object') return s.name||s.skill||s.title||'';
+  var raw = p.skills || p.topSkills || p.primarySkills || [];
+  return raw.map(function(s) {
+    if (typeof s === 'string') return s;
+    if (s && typeof s === 'object') return s.name || s.skill || s.title || '';
     return String(s);
-  }).filter(Boolean).slice(0,8).join(', ')||'-';
+  }).filter(Boolean).slice(0, 8).join(', ') || '-';
 }
-function qid(q){var n=0;for(var i=0;i<q.length;i++)n+=q.charCodeAt(i);return 'q'+n+q.length;}
-function setGlobalStatus(s){
-  var labels={idle:'idle',running:'running...',done:'all done'};
-  var classes={idle:'neutral',running:'info',done:'success'};
-  var b=document.getElementById('status-badge');
-  b.textContent=labels[s]||s; b.className='badge '+(classes[s]||'neutral');
-  document.getElementById('run-btn').disabled=s==='running';
+
+function qid(q) {
+  var n = 0;
+  for (var i = 0; i < q.length; i++) n += q.charCodeAt(i);
+  return 'q' + n + q.length;
 }
-function showError(msg){var el=document.getElementById('error-box');el.textContent=msg;el.style.display=msg?'block':'none';}
+
+function setGlobalStatus(s) {
+  var labels = { idle: 'idle', running: 'running...', done: 'all done' };
+  var classes = { idle: 'neutral', running: 'info', done: 'success' };
+  var b = document.getElementById('status-badge');
+  b.textContent = labels[s] || s;
+  b.className = 'badge ' + (classes[s] || 'neutral');
+  document.getElementById('run-btn').disabled = s === 'running';
+}
+
+function showError(msg) {
+  var el = document.getElementById('error-box');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
 
 function updateSummaryRow(query) {
-  var s=state[query];
-  var row=document.getElementById('row-'+qid(query));
-  if(!row) return;
-  var total=s.profiles.length;
-  var evKeys=Object.keys(s.evaluations);
-  var evDone=evKeys.length;
-  var goodCount=evKeys.filter(function(k){return s.evaluations[k].match;}).length;
-  var isDone=s.status==='done'||s.status==='error';
-  var progressPct=0;
-  if(isDone&&total>0) progressPct=Math.round(goodCount/total*100);
-  else if(total>0) progressPct=Math.round(evDone/total*100);
-  var matchPct=total>0?Math.round(goodCount/total*100):0;
-  var cls=s.status==='done'?'success':s.status==='error'?'danger':s.status==='evaluating'?'warning':'info';
-  var barCls=isDone?'green':'blue';
-  var html='';
-  html+='<td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+query+'</td>';
-  html+='<td style="font-size:12px;color:var(--text2)">'+(s.domain||'-')+'</td>';
-  html+='<td style="font-size:12px;color:var(--text2)">'+(s.subdomain||'-')+'</td>';
-  html+='<td><span class="badge '+cls+'">'+s.status+'</span></td>';
-  html+='<td>'+(total||'-')+'</td>';
-  html+='<td>'+(isDone?goodCount+'/'+total:evDone>0?goodCount+' so far':'-')+'</td>';
-  html+='<td>'+(isDone||evDone>0?matchPct+'%':'-')+'</td>';
-  html+='<td style="min-width:100px"><div class="bar-wrap"><div class="bar '+barCls+'" style="width:'+progressPct+'%"></div></div></td>';
-  html+='<td><button onclick="togglePanel(\''+query.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')\" style="font-size:11px;padding:2px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text2)">details</button></td>';
-  row.innerHTML=html;
+  var s = state[query];
+  var row = document.getElementById('row-' + qid(query));
+  if (!row) return;
+  var total = s.profiles.length;
+  var evKeys = Object.keys(s.evaluations);
+  var evDone = evKeys.length;
+  var goodCount = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
+  var isDone = s.status === 'done' || s.status === 'error';
+  var progressPct = 0;
+  if (isDone && total > 0) progressPct = Math.round(goodCount / total * 100);
+  else if (total > 0) progressPct = Math.round(evDone / total * 100);
+  var matchPct = total > 0 ? Math.round(goodCount / total * 100) : 0;
+  var cls = s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : s.status === 'evaluating' ? 'warning' : 'info';
+  var barCls = isDone ? 'green' : 'blue';
+  var detailBtn = '<button onclick="togglePanel(\'' + qid(query) + '\')" style="font-size:11px;padding:2px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text2)">details</button>';
+  row.innerHTML =
+    '<td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + query + '</td>' +
+    '<td style="font-size:12px;color:var(--text2)">' + (s.domain || '-') + '</td>' +
+    '<td style="font-size:12px;color:var(--text2)">' + (s.subdomain || '-') + '</td>' +
+    '<td><span class="badge ' + cls + '">' + s.status + '</span></td>' +
+    '<td>' + (total || '-') + '</td>' +
+    '<td>' + (isDone ? goodCount + '/' + total : evDone > 0 ? goodCount + ' so far' : '-') + '</td>' +
+    '<td>' + (isDone || evDone > 0 ? matchPct + '%' : '-') + '</td>' +
+    '<td style="min-width:100px"><div class="bar-wrap"><div class="bar ' + barCls + '" style="width:' + progressPct + '%"></div></div></td>' +
+    '<td>' + detailBtn + '</td>';
 }
 
 function updatePanel(query) {
-  var s=state[query];
-  var panel=document.getElementById('panel-'+qid(query));
-  if(!panel) return;
-  var evKeys=Object.keys(s.evaluations);
-  var goodCount=evKeys.filter(function(k){return s.evaluations[k].match;}).length;
-  var total=s.profiles.length;
-  var hdr=panel.querySelector('.panel-badge');
-  if(hdr){
-    hdr.textContent=s.status==='done'?goodCount+'/'+total+' fits':s.status;
-    hdr.className='badge '+(s.status==='done'?'success':s.status==='error'?'danger':'info');
+  var s = state[query];
+  var id = qid(query);
+  var panel = document.getElementById('panel-' + id);
+  if (!panel) return;
+  var evKeys = Object.keys(s.evaluations);
+  var goodCount = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
+  var total = s.profiles.length;
+  var hdr = panel.querySelector('.panel-badge');
+  if (hdr) {
+    hdr.textContent = s.status === 'done' ? goodCount + '/' + total + ' fits' : s.status;
+    hdr.className = 'badge ' + (s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : 'info');
   }
-  var logEl=panel.querySelector('.mini-log');
-  if(logEl){logEl.innerHTML=s.logs.map(function(l){return '<div>'+l+'</div>';}).join('');logEl.scrollTop=logEl.scrollHeight;}
-  var profilesEl=panel.querySelector('.profiles-mini');
-  if(!profilesEl) return;
-  profilesEl.innerHTML=s.profiles.slice(0,100).map(function(p,i){
-    var ev=s.evaluations[i];
-    var fit=ev&&ev.match;
-    var pending=ev===undefined;
-    var name=p.name||((p.firstName||'')+' '+(p.lastName||'')).trim()||'Unknown';
-    var skills=extractSkills(p);
-    var avatarCls=pending?'pending':fit?'fit':'nofit';
-    var cardCls=pending?'':fit?'fit':'nofit';
-    var profileLink=p.id?'<a href="https://matching.turing.com/developer/'+p.id+'" target="_blank" style="font-size:10px;color:var(--blue2);text-decoration:none;white-space:nowrap;margin-left:6px">profile ↗</a>':'';
-    var reasonHtml='';
-    if(ev&&ev.reason){
-      reasonHtml='<div class="reason-box '+(fit?'fit':'nofit')+'"><div class="reason-label">'+(fit?'Why fit':'Why not fit')+'</div>'+ev.reason+'</div>';
+  var logEl = panel.querySelector('.mini-log');
+  if (logEl) { logEl.innerHTML = s.logs.map(function(l) { return '<div>' + l + '</div>'; }).join(''); logEl.scrollTop = logEl.scrollHeight; }
+  var profilesEl = panel.querySelector('.profiles-mini');
+  if (!profilesEl) return;
+  profilesEl.innerHTML = s.profiles.slice(0, 100).map(function(p, i) {
+    var ev = s.evaluations[i];
+    var fit = ev && ev.match;
+    var pending = ev === undefined;
+    var name = p.name || ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Unknown';
+    var skills = extractSkills(p);
+    var avCls = pending ? 'pending' : fit ? 'fit' : 'nofit';
+    var pcCls = pending ? '' : fit ? 'fit' : '';
+    var profileLink = p.id ? '<a href="https://matching.turing.com/developer/' + p.id + '" target="_blank" style="font-size:10px;color:var(--blue2);text-decoration:none;margin-left:6px">profile ↗</a>' : '';
+    var reasonHtml = '';
+    if (ev && ev.reason) {
+      var rbCls = fit ? 'fit' : 'nofit';
+      var rbLabel = fit ? 'Why fit' : 'Why not fit';
+      reasonHtml = '<div class="rb ' + rbCls + '"><div class="rbl">' + rbLabel + '</div>' + ev.reason + '</div>';
     }
-    return '<div class="profile-card '+cardCls+'">'+
-      '<div class="profile-card-header">'+
-        '<div class="avatar-mini '+avatarCls+'">'+(i+1)+'</div>'+
-        '<div style="flex:1;min-width:0;">'+
-          '<div style="display:flex;align-items:center;"><div class="profile-name">'+name+'</div>'+profileLink+'</div>'+
-          '<div class="profile-skills">'+skills+'</div>'+
-        '</div>'+
-        '<span class="badge '+(pending?'neutral':fit?'success':'danger')+'">'+(pending?'...':fit?'fit':'no fit')+'</span>'+
-      '</div>'+reasonHtml+'</div>';
+    return '<div class="pc ' + pcCls + '">' +
+      '<div class="pch">' +
+        '<div class="av ' + avCls + '">' + (i + 1) + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center"><div class="pn">' + name + '</div>' + profileLink + '</div>' +
+          '<div class="ps">' + skills + '</div>' +
+        '</div>' +
+        '<span class="badge ' + (pending ? 'neutral' : fit ? 'success' : 'danger') + '">' + (pending ? '...' : fit ? 'fit' : 'no fit') + '</span>' +
+      '</div>' + reasonHtml + '</div>';
   }).join('');
 }
 
-function togglePanel(query){
-  var body=document.querySelector('#panel-'+qid(query)+' .query-panel-body');
-  if(body) body.classList.toggle('open');
+function togglePanel(id) {
+  var body = document.querySelector('#panel-' + id + ' .qpb');
+  if (body) body.classList.toggle('open');
 }
 
-function initUI(queries) {
-  var tbody=document.getElementById('summary-tbody');
-  tbody.innerHTML='';
-  queries.forEach(function(q){var tr=document.createElement('tr');tr.id='row-'+qid(q);tbody.appendChild(tr);});
-  document.getElementById('summary-card').style.display='';
-  var panelsEl=document.getElementById('query-panels');
-  panelsEl.innerHTML='';
-  queries.forEach(function(q){
-    var div=document.createElement('div');
-    div.className='query-panel';div.id='panel-'+qid(q);
-    var safeQ=q.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    var panelId=qid(q);
-    div.innerHTML='<div class="query-panel-header" onclick="togglePanel(\''+safeQ+'\')">'+
-      '<span class="query-panel-title">'+q+'</span>'+
-      '<span class="badge info panel-badge">queued</span></div>'+
-      '<div class="query-panel-body">'+
-        '<div class="mini-log"></div>'+
-        '<div class="profiles-mini"></div>'+
-        '<div class="review-box" id="review-box-'+panelId+'" style="display:none">'+
-          '<div class="review-label" style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px;">Human Review</div>'+
-          '<textarea class="review-textarea" id="review-text-'+panelId+'" placeholder="Add your observations about these LLM results..."></textarea>'+
-          '<div class="review-row" style="display:flex;align-items:center;gap:8px;margin-top:6px;">'+
-            '<input class="reviewer-input" id="reviewer-name-'+panelId+'" placeholder="Your name" style="padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);width:140px;outline:none;"/>'+
-            '<button class="review-btn" id="review-btn-'+panelId+'" onclick="submitReview(''+safeQ+'',''+panelId+'')" style="padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">Submit review</button>'+
-            '<span id="review-sent-'+panelId+'" style="font-size:11px;color:#34d399;display:none">Saved!</span>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    panelsEl.appendChild(div);
-  });
-  document.getElementById('panels-section').style.display='';
+function showReviewSection(id) {
+  var el = document.getElementById('review-' + id);
+  if (el) el.style.display = 'block';
 }
 
-async function runQuery(query,pageSize,runId){
-  var s=state[query];
-  s.status='searching';s.logs=[];s.domain=null;s.subdomain=null;
-  function log(msg){var t=new Date().toLocaleTimeString();s.logs.push('['+t+'] '+msg);updatePanel(query);updateSummaryRow(query);}
-  log('Searching "'+query+'"...');
-  try{
-    var params=new URLSearchParams({query:query,pageSize:pageSize,page:'1'});
-    var res=await fetch(PROXY+'/api/search?'+params);
-    if(!res.ok){var txt=await res.text();throw new Error('HTTP '+res.status+': '+txt.slice(0,200));}
-    var data=await res.json();
-    if(data.error){throw new Error(data.error);}
-    s.profiles=data.results||data.talents||data.data||[];
-    log('Got '+s.profiles.length+' profiles.');
-    updatePanel(query);updateSummaryRow(query);
-    if(!s.profiles.length){s.status='done';updateSummaryRow(query);updatePanel(query);return;}
-  }catch(e){s.status='error';log('Search error: '+e.message);updateSummaryRow(query);updatePanel(query);return;}
-
-  s.status='evaluating';
-  log('Evaluating '+Math.min(s.profiles.length,100)+' profiles (sequential with retry)...');
-  updateSummaryRow(query);
-
-  var toEval=s.profiles.slice(0,100);
-  var BATCH=5;var totalBatches=Math.ceil(toEval.length/BATCH);
-  var MAX_RETRIES=4;var PAUSE_MS=1500;
-
-  for(var i=0;i<toEval.length;i+=BATCH){
-    var batch=toEval.slice(i,i+BATCH).map(function(p,j){return Object.assign({},p,{_idx:i+j});});
-    var batchNum=Math.floor(i/BATCH)+1;
-    for(var attempt=1;attempt<=MAX_RETRIES;attempt++){
-      try{
-        var res2=await fetch(PROXY+'/api/evaluate',{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({query:query,profiles:batch,runId:runId})
-        });
-        var data2=await res2.json();
-        if(!res2.ok||!data2.results) throw new Error('API error: '+(data2.error||res2.status));
-        if(data2.results.length<batch.length) throw new Error('Incomplete: got '+data2.results.length+' of '+batch.length);
-        if(data2.query_domain&&!s.domain){s.domain=data2.query_domain;s.subdomain=data2.query_subdomain||null;}
-        data2.results.forEach(function(item){s.evaluations[item.index]={match:item.match,reason:item.reason};});
-        var good=Object.keys(s.evaluations).filter(function(k){return s.evaluations[k].match;}).length;
-        log('Batch '+batchNum+'/'+totalBatches+' OK - '+good+' fits so far.');
-        updatePanel(query);updateSummaryRow(query);
-        break;
-      }catch(e){
-        var waitMs=PAUSE_MS*attempt;
-        if(attempt<MAX_RETRIES){log('Batch '+batchNum+' attempt '+attempt+' failed ('+e.message+') - retrying in '+(waitMs/1000)+'s...');await new Promise(function(r){setTimeout(r,waitMs);});}
-        else{log('Batch '+batchNum+' FAILED after '+MAX_RETRIES+' attempts: '+e.message);}
-      }
-    }
-    if(i+BATCH<toEval.length) await new Promise(function(r){setTimeout(r,PAUSE_MS);});
-  }
-
-  var evKeys=Object.keys(s.evaluations);
-  var good=evKeys.filter(function(k){return s.evaluations[k].match;}).length;
-  var total=toEval.length;
-  var matchRate=total>0?Math.round(good/total*100):0;
-  s.status='done';
-  log('Done. '+good+'/'+total+' good fits.');
-  updatePanel(query);updateSummaryRow(query);
-
-  // Enable human review box
-  var reviewBox=document.getElementById('review-box-'+qid(query));
-  if(reviewBox) reviewBox.style.display='block';
-
-  try{
-    var res3=await fetch(PROXY+'/api/runs',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({runId:runId,query:query,queryDomain:s.domain,querySubdomain:s.subdomain,totalResults:total,goodFits:good,matchRate:matchRate})});
-    var data3=await res3.json();
-    if(data3.ok) log('Saved to Supabase.');
-    else log('Supabase warning: '+JSON.stringify(data3));
-  }catch(e){log('Warning: could not save: '+e.message);}
-}
-
-async function submitReview(query, panelId) {
-  var reviewText = document.getElementById('review-text-'+panelId).value.trim();
-  var reviewerName = document.getElementById('reviewer-name-'+panelId).value.trim() || 'anonymous';
-  var btn = document.getElementById('review-btn-'+panelId);
-  var sent = document.getElementById('review-sent-'+panelId);
-
-  if (!reviewText) { alert('Please add a review before submitting.'); return; }
-
+function submitReview(id) {
+  var query = Object.keys(state).find(function(q) { return qid(q) === id; });
+  if (!query) { alert('Query not found'); return; }
   var s = state[query];
-  if (!s || !s.runId) { alert('Run ID not found for this query.'); return; }
-
+  var reviewText = document.getElementById('review-text-' + id).value.trim();
+  var reviewerName = document.getElementById('reviewer-name-' + id).value.trim() || 'anonymous';
+  var btn = document.getElementById('review-btn-' + id);
+  var savedMsg = document.getElementById('review-saved-' + id);
+  if (!reviewText) { alert('Please add a review before submitting.'); return; }
   btn.disabled = true;
   btn.textContent = 'Saving...';
-
-  try {
-    var res = await fetch(PROXY+'/api/review', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        runId: s.runId,
-        query: query,
-        review: reviewText,
-        reviewedBy: reviewerName,
-      })
-    });
-    var data = await res.json();
+  fetch(PROXY + '/api/review', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ runId: s.runId, query: query, review: reviewText, reviewedBy: reviewerName })
+  }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok) {
       btn.textContent = 'Submitted';
-      sent.style.display = 'inline';
+      savedMsg.style.display = 'inline';
     } else {
       btn.disabled = false;
       btn.textContent = 'Submit review';
-      alert('Error saving review: ' + (data.error || 'unknown'));
+      alert('Error: ' + (data.error || 'unknown'));
     }
-  } catch(e) {
+  }).catch(function(e) {
     btn.disabled = false;
     btn.textContent = 'Submit review';
     alert('Error: ' + e.message);
-  }
+  });
 }
 
-async function runAll(){
-  var rawQueries=document.getElementById('queries').value.trim();
-  var pageSize=document.getElementById('pageSize').value;
+function initUI(queries) {
+  var tbody = document.getElementById('summary-tbody');
+  tbody.innerHTML = '';
+  queries.forEach(function(q) {
+    var tr = document.createElement('tr');
+    tr.id = 'row-' + qid(q);
+    tbody.appendChild(tr);
+  });
+  document.getElementById('summary-card').style.display = '';
+  var panelsEl = document.getElementById('query-panels');
+  panelsEl.innerHTML = '';
+  queries.forEach(function(q) {
+    var id = qid(q);
+    var div = document.createElement('div');
+    div.className = 'query-panel';
+    div.id = 'panel-' + id;
+    // Build panel HTML safely without inline event string escaping issues
+    var header = document.createElement('div');
+    header.className = 'qph';
+    header.addEventListener('click', (function(pid) { return function() { togglePanel(pid); }; })(id));
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'qpt';
+    titleSpan.textContent = q;
+    var badgeSpan = document.createElement('span');
+    badgeSpan.className = 'badge info panel-badge';
+    badgeSpan.textContent = 'queued';
+    header.appendChild(titleSpan);
+    header.appendChild(badgeSpan);
+    var body = document.createElement('div');
+    body.className = 'qpb';
+    var miniLog = document.createElement('div');
+    miniLog.className = 'mini-log';
+    var profilesMini = document.createElement('div');
+    profilesMini.className = 'profiles-mini';
+    // Review section
+    var reviewSection = document.createElement('div');
+    reviewSection.className = 'review-section';
+    reviewSection.id = 'review-' + id;
+    reviewSection.style.display = 'none';
+    reviewSection.innerHTML =
+      '<label>Human Review</label>' +
+      '<textarea id="review-text-' + id + '" placeholder="Add your observations about these LLM results..."></textarea>' +
+      '<div class="review-row">' +
+        '<input id="reviewer-name-' + id + '" placeholder="Your name" />' +
+        '<button class="review-btn" id="review-btn-' + id + '">Submit review</button>' +
+        '<span class="saved-msg" id="review-saved-' + id + '">Saved!</span>' +
+      '</div>';
+    // Wire up review button after DOM insert
+    body.appendChild(miniLog);
+    body.appendChild(profilesMini);
+    body.appendChild(reviewSection);
+    div.appendChild(header);
+    div.appendChild(body);
+    panelsEl.appendChild(div);
+    // Add click handler for review button
+    document.getElementById('review-btn-' + id).addEventListener('click', (function(pid) {
+      return function() { submitReview(pid); };
+    })(id));
+  });
+  document.getElementById('panels-section').style.display = '';
+}
+
+async function runQuery(query, pageSize, runId) {
+  var s = state[query];
+  s.status = 'searching'; s.logs = []; s.domain = null; s.subdomain = null;
+
+  function log(msg) {
+    var t = new Date().toLocaleTimeString();
+    s.logs.push('[' + t + '] ' + msg);
+    updatePanel(query); updateSummaryRow(query);
+  }
+
+  log('Searching "' + query + '"...');
+  try {
+    var params = new URLSearchParams({ query: query, pageSize: pageSize, page: '1' });
+    var res = await fetch(PROXY + '/api/search?' + params);
+    if (!res.ok) { var txt = await res.text(); throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 200)); }
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    s.profiles = data.results || data.talents || data.data || [];
+    log('Got ' + s.profiles.length + ' profiles.');
+    updatePanel(query); updateSummaryRow(query);
+    if (!s.profiles.length) { s.status = 'done'; updateSummaryRow(query); updatePanel(query); return; }
+  } catch (e) {
+    s.status = 'error'; log('Search error: ' + e.message);
+    updateSummaryRow(query); updatePanel(query); return;
+  }
+
+  s.status = 'evaluating';
+  log('Evaluating ' + Math.min(s.profiles.length, 100) + ' profiles...');
+  updateSummaryRow(query);
+
+  var toEval = s.profiles.slice(0, 100);
+  var BATCH = 5, totalBatches = Math.ceil(toEval.length / BATCH);
+  var MAX_RETRIES = 4, PAUSE_MS = 1500;
+
+  for (var i = 0; i < toEval.length; i += BATCH) {
+    var batch = toEval.slice(i, i + BATCH).map(function(p, j) { return Object.assign({}, p, { _idx: i + j }); });
+    var batchNum = Math.floor(i / BATCH) + 1;
+    for (var attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        var res2 = await fetch(PROXY + '/api/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query, profiles: batch, runId: runId })
+        });
+        var data2 = await res2.json();
+        if (!res2.ok || !data2.results) throw new Error('API error: ' + (data2.error || res2.status));
+        if (data2.results.length < batch.length) throw new Error('Incomplete: got ' + data2.results.length + ' of ' + batch.length);
+        if (data2.query_domain && !s.domain) { s.domain = data2.query_domain; s.subdomain = data2.query_subdomain || null; }
+        data2.results.forEach(function(item) { s.evaluations[item.index] = { match: item.match, reason: item.reason }; });
+        var good = Object.keys(s.evaluations).filter(function(k) { return s.evaluations[k].match; }).length;
+        log('Batch ' + batchNum + '/' + totalBatches + ' OK - ' + good + ' fits so far.');
+        updatePanel(query); updateSummaryRow(query);
+        break;
+      } catch (e) {
+        var waitMs = PAUSE_MS * attempt;
+        if (attempt < MAX_RETRIES) {
+          log('Batch ' + batchNum + ' attempt ' + attempt + ' failed - retrying in ' + (waitMs / 1000) + 's...');
+          await new Promise(function(r) { setTimeout(r, waitMs); });
+        } else {
+          log('Batch ' + batchNum + ' FAILED after ' + MAX_RETRIES + ' attempts: ' + e.message);
+        }
+      }
+    }
+    if (i + BATCH < toEval.length) await new Promise(function(r) { setTimeout(r, PAUSE_MS); });
+  }
+
+  var evKeys = Object.keys(s.evaluations);
+  var good = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
+  var total = toEval.length;
+  var matchRate = total > 0 ? Math.round(good / total * 100) : 0;
+  s.status = 'done';
+  log('Done. ' + good + '/' + total + ' good fits.');
+  updatePanel(query); updateSummaryRow(query);
+  showReviewSection(qid(query));
+
+  try {
+    var res3 = await fetch(PROXY + '/api/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ runId: runId, query: query, queryDomain: s.domain, querySubdomain: s.subdomain, totalResults: total, goodFits: good, matchRate: matchRate })
+    });
+    var data3 = await res3.json();
+    if (data3.ok) log('Saved to Supabase.');
+    else log('Supabase warning: ' + JSON.stringify(data3));
+  } catch (e) { log('Warning: could not save: ' + e.message); }
+}
+
+async function runAll() {
+  var rawQueries = document.getElementById('queries').value.trim();
+  var pageSize = document.getElementById('pageSize').value;
   showError('');
-  if(!rawQueries){showError('At least one query is required.');return;}
-  var queries=rawQueries.split('\n').map(function(q){return q.trim();}).filter(Boolean).slice(0,20);
-  if(!queries.length){showError('No valid queries found.');return;}
-  var runId='run_'+Date.now();
-  var box=document.getElementById('run-id-box');
-  box.textContent='Run ID: '+runId;box.style.display='';
-  queries.forEach(function(q){state[q]={status:'queued',profiles:[],evaluations:{},logs:[],domain:null,subdomain:null,runId:runId};});
-  initUI(queries);setGlobalStatus('running');
-  queries.forEach(function(q){updateSummaryRow(q);updatePanel(q);});
-  await Promise.all(queries.map(function(q){return runQuery(q,pageSize,runId);}));
+  if (!rawQueries) { showError('At least one query is required.'); return; }
+  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 20);
+  if (!queries.length) { showError('No valid queries found.'); return; }
+  var runId = 'run_' + Date.now();
+  var box = document.getElementById('run-id-box');
+  box.textContent = 'Run ID: ' + runId;
+  box.style.display = '';
+  queries.forEach(function(q) {
+    state[q] = { status: 'queued', profiles: [], evaluations: {}, logs: [], domain: null, subdomain: null, runId: runId };
+  });
+  initUI(queries);
+  setGlobalStatus('running');
+  queries.forEach(function(q) { updateSummaryRow(q); updatePanel(q); });
+  await Promise.all(queries.map(function(q) { return runQuery(q, pageSize, runId); }));
   setGlobalStatus('done');
 }
 </script>
