@@ -71,10 +71,7 @@
   </div>
 
   <div class="card">
-    <div class="field">
-      <label>JWT Token</label>
-      <textarea id="token" rows="3" placeholder="Paste your Bearer token here (without Bearer)..."></textarea>
-    </div>
+
     <div class="row">
       <div class="field">
         <label>Search Queries - one per line (up to 10)</label>
@@ -313,7 +310,7 @@ async function runQuery(query, token, pageSize, runId) {
 
   // 1. Fetch profiles
   try {
-    var params = new URLSearchParams({ token: token, query: query, pageSize: pageSize, page: '1' });
+    var params = new URLSearchParams({ query: query, pageSize: pageSize, page: '1' });
     var res = await fetch(PROXY + '/api/search?' + params);
     if (!res.ok) { var txt = await res.text(); throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 200)); }
     var data = await res.json();
@@ -425,12 +422,12 @@ async function runQuery(query, token, pageSize, runId) {
 }
 
 async function runAll() {
-  var token = document.getElementById('token').value.trim();
+  var token = '';
   var rawQueries = document.getElementById('queries').value.trim();
   var pageSize = document.getElementById('pageSize').value;
 
   showError('');
-  if (!token) { showError('JWT token is required.'); return; }
+
   if (!rawQueries) { showError('At least one query is required.'); return; }
 
   var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 10);
