@@ -22,37 +22,99 @@ export default async function handler(req, res) {
     const raw = p.skills || p.topSkills || p.primarySkills || [];
     return raw.map(s => {
       if (typeof s === "string") return s;
-      if (s && typeof s === "object") return s.name || s.skill || s.title || "";
+      if (s && typeof s === "object") {
+        const yrs = s.yearsOfExperience ? ` (${s.yearsOfExperience}yrs)` : "";
+        return (s.name || s.skill || s.title || "") + yrs;
+      }
       return String(s);
-    }).filter(Boolean).slice(0, 12).join(", ") || "—";
+    }).filter(Boolean).join(", ") || "—";
+  }
+
+  function extractWorkExperience(p) {
+    const we = p.workExperience || [];
+    return we.map(w =>
+      `${w.position || ""} at ${w.company || ""} (${w.durationYears || "?"}yrs, ${w.employmentType || ""}): ${(w.description || "").slice(0, 300)}`
+    ).join("\n") || "—";
+  }
+
+  function extractEducation(p) {
+    const ed = p.education || [];
+    return ed.map(e =>
+      `${e.degree || e.level || ""} at ${e.school || ""}`
+    ).join("; ") || "—";
+  }
+
+  function extractProjects(p) {
+    const pr = p.projects || [];
+    return pr.map(pr =>
+      `${pr.name || ""}: ${(pr.description || "").slice(0, 200)}`
+    ).join("\n") || "—";
+  }
+
+  function extractCertifications(p) {
+    const c = p.certifications || [];
+    return c.map(c => c.name || c.title || JSON.stringify(c)).join(", ") || "—";
+  }
+
+  function extractPublications(p) {
+    const pub = p.publications || [];
+    return pub.map(p => p.title || p.name || JSON.stringify(p)).join(", ") || "—";
+  }
+
+  function extractLanguages(p) {
+    const l = p.languages || [];
+    return l.map(l => typeof l === "string" ? l : l.name || l.language || JSON.stringify(l)).join(", ") || "—";
   }
 
   const indexMap = {};
   const text = profiles.map((p, batchIndex) => {
     const globalIdx = p._idx ?? batchIndex;
     indexMap[batchIndex] = globalIdx;
+
     const name = p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim() || "Unknown";
-    const skills = extractSkills(p);
-    const exp = p.totalExperience || p.yearsOfExperience || "?";
-    const title = p.title || p.designation || "";
-    const resume = p.resume_plain_text ? p.resume_plain_text.slice(0, 800) : "";
-    return `[${batchIndex}] ${name} | ${title} | ${exp}yrs | Skills: ${skills}${resume ? ` | Resume excerpt: ${resume}` : ""}`;
-  }).join("\n");
 
-  const prompt = `You are an expert talent recruiter evaluating profiles for: "${query}".
+    return `
+--- CANDIDATE [${batchIndex}] ---
+Name: ${name}
+Role: ${p.role || p.designation || p.title || "—"}
+Location: ${[p.city, p.country, p.continent].filter(Boolean).join(", ") || "—"}
+Years of Experience: ${p.yearsOfExperience || p.totalExperience || "—"}
+Availability: ${p.availability || "—"}
 
-For each profile decide if it is a good fit (>=70% match). Base your answer strictly on what is present in the data.
+Skills: ${extractSkills(p)}
+
+Work Experience:
+${extractWorkExperience(p)}
+
+Education: ${extractEducation(p)}
+
+Projects:
+${extractProjects(p)}
+
+Certifications: ${extractCertifications(p)}
+Publications: ${extractPublications(p)}
+Languages: ${extractLanguages(p)}
+
+Resume:
+${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
+`.trim();
+  }).join("\n\n");
+
+  const prompt = `You are an expert talent recruiter evaluating candidates for the following search query: "${query}".
+
+For each candidate, decide if they are a good fit (>=70% match).
 
 Rules:
-- Good fit (match: true): candidate clearly meets the query requirements.
-- No fit (match: false): briefly state what is missing or weak (e.g. "only 2yrs Python, no Django experience").
-- Do not fabricate facts not present in the data.
+- Base your evaluation strictly on what is present in the candidate data — do not fabricate facts.
+- Good fit (match: true): candidate clearly meets the query requirements. State specifically which skills, experience, or background supports this.
+- No fit (match: false): clearly state what is missing or insufficient (e.g. "only 1yr Python experience, query requires 5+", "no Django experience found").
+- Be concise but specific. No vague praise or filler.
 - No preamble, no trailing commentary.
 
-Reply ONLY with a JSON array, one object per profile, in order:
-[{"index":0,"match":true,"reason":"concrete reason based on data"},...]
+Reply ONLY with a JSON array, one object per candidate, in order:
+[{"index":0,"match":true,"reason":"concrete reason"},...]
 
-Profiles:
+Candidates:
 ${text}`;
 
   try {
@@ -65,7 +127,7 @@ ${text}`;
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 8000,
+        max_tokens: 4000,
         temperature: 0,
       }),
     });
@@ -84,7 +146,7 @@ ${text}`;
     // Save to Supabase if configured
     if (supabaseUrl && supabaseKey && runId) {
       const rows = remapped.map(item => {
-        const p = profiles.find(pr => (pr._idx ?? 0) === (item.index - (profiles[0]?._idx ?? 0)));
+        const p = profiles.find(pr => (pr._idx ?? 0) === item.index) || profiles[0];
         const name = p ? (p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim()) : "Unknown";
         return {
           run_id: runId,
