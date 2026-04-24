@@ -6,6 +6,9 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST" });
 
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY not configured" });
+
   const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
   const { query, profiles } = body;
 
@@ -16,7 +19,7 @@ export default async function handler(req, res) {
     const raw = p.skills || p.topSkills || p.primarySkills || [];
     return raw.map(s => {
       if (typeof s === "string") return s;
-      if (s && typeof s === "object") return s.name || s.skill || s.title || JSON.stringify(s);
+      if (s && typeof s === "object") return s.name || s.skill || s.title || "";
       return String(s);
     }).filter(Boolean).slice(0, 12).join(", ") || "—";
   }
@@ -38,18 +41,27 @@ Profiles:
 ${text}`;
 
   try {
-    const llmRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const llmRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
+        model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
+        max_tokens: 1000,
+        temperature: 0,
       }),
     });
 
     const llmData = await llmRes.json();
-    const raw = (llmData?.content || []).map(c => c.text || "").join("");
+
+    if (!llmRes.ok) {
+      return res.status(502).json({ error: "OpenAI API error", details: llmData });
+    }
+
+    const raw = llmData?.choices?.[0]?.message?.content || "";
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
     return res.status(200).json({ results: parsed });
   } catch (err) {
