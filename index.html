@@ -14,12 +14,10 @@
   label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
   input, textarea, select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; }
   textarea { resize: vertical; font-family: monospace; }
-  input:focus, textarea:focus, select:focus { outline: none; border-color: #888; }
   .row { display: grid; grid-template-columns: 1fr 140px; gap: 12px; margin-top: 10px; }
   .field { margin-bottom: 10px; }
   button { padding: 9px 20px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
   button:disabled { background: #999; cursor: not-allowed; }
-  button.secondary { background: transparent; color: #111; border: 1px solid #ddd; }
   .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; }
   .badge.neutral { background: #f0f0f0; color: #666; }
   .badge.info { background: #e8f0fe; color: #1a56cc; }
@@ -42,10 +40,10 @@
   .avatar.fit { background: #d4edda; color: #155724; }
   .avatar.nofit { background: #f8d7da; color: #721c24; }
   .profile-name { font-weight: 500; font-size: 13px; }
-  .profile-title { font-size: 12px; color: #666; }
-  .profile-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #666; display: none; }
+  .profile-title { font-size: 12px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #666; display: none; line-height: 1.6; }
   .profile-details.open { display: block; }
-  .toggle-btn { font-size: 11px; padding: 2px 8px; background: transparent; color: #666; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; margin-left: auto; }
+  .toggle-btn { font-size: 11px; padding: 2px 8px; background: transparent; color: #666; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
   .log { font-family: monospace; font-size: 11px; color: #555; max-height: 300px; overflow-y: auto; }
   .log div { padding: 1px 0; }
   .error-box { background: #f8d7da; color: #721c24; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; }
@@ -68,7 +66,7 @@
     <div class="row">
       <div class="field">
         <label>Search Query</label>
-        <input id="query" type="text" value="python 5+ years" placeholder="e.g. python 5+ years">
+        <input id="query" type="text" value="python 5+ years">
       </div>
       <div class="field">
         <label>Page Size</label>
@@ -87,6 +85,7 @@
   </div>
 
   <div id="metrics" class="metrics" style="display:none"></div>
+
   <div id="history-card" class="card" style="display:none">
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">Run history</div>
     <div id="history-list"></div>
@@ -111,15 +110,14 @@ const PROXY = window.location.origin;
 let profiles = [];
 let evaluations = {};
 let history = [];
-let logs = [];
 
 function setStatus(s) {
   const map = {
-    idle:      { label: 'idle',                  cls: 'neutral' },
-    running:   { label: 'searching…',            cls: 'info' },
-    evaluating:{ label: 'evaluating with LLM…', cls: 'warning' },
-    done:      { label: 'done',                  cls: 'success' },
-    error:     { label: 'error',                 cls: 'danger' },
+    idle:       { label: 'idle',                  cls: 'neutral' },
+    running:    { label: 'searching…',            cls: 'info' },
+    evaluating: { label: 'evaluating with LLM…', cls: 'warning' },
+    done:       { label: 'done',                  cls: 'success' },
+    error:      { label: 'error',                 cls: 'danger' },
   };
   const b = document.getElementById('status-badge');
   b.textContent = map[s].label;
@@ -129,7 +127,6 @@ function setStatus(s) {
 
 function addLog(msg) {
   const t = new Date().toLocaleTimeString();
-  logs.push(`[${t}] ${msg}`);
   const el = document.getElementById('log-list');
   const div = document.createElement('div');
   div.textContent = `[${t}] ${msg}`;
@@ -156,11 +153,9 @@ function renderProfiles() {
     const ev = evaluations[i];
     const fit = ev?.match;
     const pending = !ev;
-    const name = p.name || ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Unknown';
-    const title = p.title || p.designation || '—';
+    const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
     const skills = (p.skills || p.topSkills || []).slice(0, 12).join(', ') || '—';
     const exp = p.totalExperience || p.yearsOfExperience || '?';
-
     const div = document.createElement('div');
     div.className = 'profile' + (fit ? ' fit' : '');
     div.innerHTML = `
@@ -168,15 +163,19 @@ function renderProfiles() {
         <div class="avatar ${pending ? '' : fit ? 'fit' : 'nofit'}">${i+1}</div>
         <div style="flex:1;min-width:0">
           <div class="profile-name">${name}</div>
-          <div class="profile-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
+          <div class="profile-title">${p.title || p.designation || '—'}</div>
         </div>
         <span class="badge ${pending ? 'neutral' : fit ? 'success' : 'danger'}">${pending ? 'pending' : fit ? 'fit' : 'no fit'}</span>
-        <button class="toggle-btn" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.nextElementSibling.classList.contains('open')?'▲':'▼'">▼</button>
-        <div class="profile-details">
-          <div><strong>Skills:</strong> ${skills}</div>
-          <div><strong>Experience:</strong> ${exp} yrs</div>
-          ${ev?.reason ? `<div><strong>LLM:</strong> <em>${ev.reason}</em></div>` : ''}
-        </div>
+        <button class="toggle-btn" onclick="
+          var d=this.parentElement.nextElementSibling;
+          d.classList.toggle('open');
+          this.textContent=d.classList.contains('open')?'▲':'▼';
+        ">▼</button>
+      </div>
+      <div class="profile-details">
+        <div><strong>Skills:</strong> ${skills}</div>
+        <div><strong>Experience:</strong> ${exp} yrs</div>
+        ${ev?.reason ? `<div><strong>LLM:</strong> <em>${ev.reason}</em></div>` : ''}
       </div>
     `;
     list.appendChild(div);
@@ -194,14 +193,14 @@ function renderMetrics(summary) {
   ].map(m => `
     <div class="metric">
       <div class="metric-label">${m.label}</div>
-      <div class="metric-value ${m.small ? 'small' : ''}">${m.value}</div>
+      <div class="metric-value ${m.small?'small':''}">${m.value}</div>
     </div>
   `).join('');
 }
 
 function renderHistory() {
   const card = document.getElementById('history-card');
-  if (history.length === 0) { card.style.display = 'none'; return; }
+  if (!history.length) { card.style.display='none'; return; }
   card.style.display = '';
   document.getElementById('history-list').innerHTML = history.map(h => `
     <div class="history-row">
@@ -221,15 +220,16 @@ async function run() {
 
   showError('');
   if (!token) { showError('JWT token is required.'); return; }
-  if (!query) { showError('Query is required.'); return; }
+  if (!query)  { showError('Query is required.'); return; }
 
-  profiles = []; evaluations = {}; logs = [];
+  profiles = []; evaluations = {};
   document.getElementById('log-list').innerHTML = '';
   document.getElementById('profiles-list').innerHTML = '';
   document.getElementById('results-card').style.display = '';
   setStatus('running');
   addLog(`Searching: "${query}" (pageSize=${pageSize})`);
 
+  // 1. Search
   try {
     const params = new URLSearchParams({ token, query, pageSize, page: '1' });
     const res = await fetch(`${PROXY}/api/search?${params}`);
@@ -238,11 +238,12 @@ async function run() {
     profiles = data?.results || data?.talents || data?.data || [];
     addLog(`Got ${profiles.length} profiles.`);
     renderProfiles();
-    if (profiles.length === 0) { addLog('No results. Check query or token.'); setStatus('done'); return; }
+    if (!profiles.length) { addLog('No results.'); setStatus('done'); return; }
   } catch(e) {
     showError(e.message); addLog(`Search error: ${e.message}`); setStatus('error'); return;
   }
 
+  // 2. Evaluate via proxy
   setStatus('evaluating');
   addLog('Evaluating up to 100 profiles with LLM…');
 
@@ -251,32 +252,15 @@ async function run() {
   const BATCH = 10;
 
   for (let i = 0; i < toEval.length; i += BATCH) {
-    const batch = toEval.slice(i, i + BATCH);
-    const text = batch.map((p, j) => {
-      const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
-      const skills = (p.skills || p.topSkills || []).join(', ');
-      const exp = p.totalExperience || p.yearsOfExperience || '?';
-      return `[${i+j}] ${name} | ${p.title||p.designation||''} | ${exp}yrs | Skills: ${skills}`;
-    }).join('\n');
-
-    const prompt = `You are evaluating talent profiles for the search query: "${query}".
-For each profile, decide if it's a good fit (>=70% match).
-Reply ONLY with a JSON array:
-[{"index":0,"match":true,"reason":"short reason"},...]
-
-Profiles:
-${text}`;
-
+    const batch = toEval.slice(i, i + BATCH).map((p, j) => ({ ...p, _idx: i + j }));
     try {
-      const llmRes = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch(`${PROXY}/api/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] }),
+        body: JSON.stringify({ query, profiles: batch }),
       });
-      const llmData = await llmRes.json();
-      const raw = (llmData?.content||[]).map(c=>c.text||'').join('');
-      const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
-      for (const item of parsed) {
+      const data = await res.json();
+      for (const item of (data.results || [])) {
         evaluations[item.index] = { match: item.match, reason: item.reason };
         if (item.match) goodCount++;
       }
