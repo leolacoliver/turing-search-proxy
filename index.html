@@ -40,8 +40,6 @@
   .query-panel-body.open { display: block; }
   .mini-log { font-family: monospace; font-size: 10px; color: #888; max-height: 80px; overflow-y: auto; margin-bottom: 10px; background: #f8f8f8; padding: 6px 8px; border-radius: 6px; }
   .profiles-mini { max-height: 400px; overflow-y: auto; }
-
-  /* Profile card */
   .profile-card { border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; border: 1px solid #e0e0e0; }
   .profile-card.fit   { border-color: #28a745; background: #f6fff8; }
   .profile-card.nofit { border-color: #e0e0e0; background: #fff; }
@@ -52,13 +50,10 @@
   .avatar-mini.nofit  { background: #f8d7da; color: #721c24; }
   .profile-name { font-weight: 500; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .profile-skills { font-size: 11px; color: #888; margin-top: 2px; }
-
-  /* Reason box */
   .reason-box { margin-top: 7px; padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.5; }
   .reason-box.fit   { background: #d4edda; color: #155724; }
   .reason-box.nofit { background: #f8d7da; color: #721c24; }
   .reason-label { font-weight: 600; margin-bottom: 2px; }
-
   .error-box { background: #f8d7da; color: #721c24; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; }
   #status-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
   .section-title { font-size: 14px; font-weight: 500; margin-bottom: 12px; }
@@ -73,11 +68,11 @@
   <div class="card">
     <div class="field">
       <label>JWT Token</label>
-      <textarea id="token" rows="3" placeholder="Paste your Bearer token here (without 'Bearer ')…"></textarea>
+      <textarea id="token" rows="3" placeholder="Paste your Bearer token here (without 'Bearer ')..."></textarea>
     </div>
     <div class="row">
       <div class="field">
-        <label>Search Queries — one per line (up to 10)</label>
+        <label>Search Queries - one per line (up to 10)</label>
         <textarea id="queries" rows="6" placeholder="python 5+ years&#10;react senior developer&#10;django backend 3+ years"></textarea>
       </div>
       <div class="field">
@@ -103,6 +98,8 @@
       <thead>
         <tr>
           <th>Query</th>
+          <th>Domain</th>
+          <th>Subdomain</th>
           <th>Status</th>
           <th>Fetched</th>
           <th>Good fits</th>
@@ -127,233 +124,256 @@ const state = {};
 
 function extractSkills(p) {
   const raw = p.skills || p.topSkills || p.primarySkills || [];
-  return raw.map(s => {
+  return raw.map(function(s) {
     if (typeof s === 'string') return s;
     if (s && typeof s === 'object') return s.name || s.skill || s.title || '';
     return String(s);
-  }).filter(Boolean).slice(0, 8).join(', ') || '—';
+  }).filter(Boolean).slice(0, 8).join(', ') || '-';
 }
 
 function qid(q) {
-  return 'q' + Array.from(q).reduce((a,c)=>a+c.charCodeAt(0),0) + q.length;
+  return 'q' + Array.from(q).reduce(function(a,c){return a+c.charCodeAt(0);},0) + q.length;
 }
 
 function setGlobalStatus(s) {
-  const map = { idle: ['idle','neutral'], running: ['running…','info'], done: ['all done','success'] };
-  const [label, cls] = map[s] || ['idle','neutral'];
-  const b = document.getElementById('status-badge');
-  b.textContent = label; b.className = 'badge ' + cls;
+  var map = { idle: ['idle','neutral'], running: ['running...','info'], done: ['all done','success'] };
+  var m = map[s] || ['idle','neutral'];
+  var b = document.getElementById('status-badge');
+  b.textContent = m[0]; b.className = 'badge ' + m[1];
   document.getElementById('run-btn').disabled = s === 'running';
 }
 
 function showError(msg) {
-  const el = document.getElementById('error-box');
+  var el = document.getElementById('error-box');
   el.textContent = msg; el.style.display = msg ? 'block' : 'none';
 }
 
 function updateSummaryRow(query) {
-  const s = state[query];
-  const row = document.getElementById('row-' + qid(query));
+  var s = state[query];
+  var row = document.getElementById('row-' + qid(query));
   if (!row) return;
-  const total = s.profiles.length;
-  const evDone = Object.keys(s.evaluations).length;
-  const goodCount = Object.values(s.evaluations).filter(e => e.match).length;
-  const pct = total > 0 ? Math.round(goodCount / total * 100) : 0;
-  const evPct = total > 0 ? Math.round(evDone / total * 100) : 0;
-  const isDone = s.status === 'done' || s.status === 'error';
-  const cls = s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : s.status === 'evaluating' ? 'warning' : 'info';
-  row.innerHTML = `
-    <td style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${query}</td>
-    <td><span class="badge ${cls}">${s.status}</span></td>
-    <td>${total || '—'}</td>
-    <td>${isDone ? `${goodCount}/${total}` : evDone > 0 ? `${goodCount} so far` : '—'}</td>
-    <td>${isDone || evDone > 0 ? `${pct}%` : '—'}</td>
-    <td style="min-width:100px">
-      <div class="progress-bar-wrap">
-        <div class="progress-bar ${!isDone ? 'running' : ''}" style="width:${isDone ? pct : evPct}%"></div>
-      </div>
-    </td>
-    <td><button onclick="togglePanel('${query.replace(/'/g,"\\'")}')" style="padding:3px 10px;font-size:11px;background:#f0f0f0;color:#333;border:none;border-radius:6px;cursor:pointer">details</button></td>
-  `;
+  var total = s.profiles.length;
+  var evDone = Object.keys(s.evaluations).length;
+  var goodCount = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
+  var pct = total > 0 ? Math.round(goodCount / total * 100) : 0;
+  var evPct = total > 0 ? Math.round(evDone / total * 100) : 0;
+  var isDone = s.status === 'done' || s.status === 'error';
+  var cls = s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : s.status === 'evaluating' ? 'warning' : 'info';
+  var html = '<td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + query + '</td>';
+  html += '<td style="font-size:12px;color:#555">' + (s.domain || '-') + '</td>';
+  html += '<td style="font-size:12px;color:#555">' + (s.subdomain || '-') + '</td>';
+  html += '<td><span class="badge ' + cls + '">' + s.status + '</span></td>';
+  html += '<td>' + (total || '-') + '</td>';
+  html += '<td>' + (isDone ? goodCount+'/'+total : evDone > 0 ? goodCount+' so far' : '-') + '</td>';
+  html += '<td>' + (isDone || evDone > 0 ? pct+'%' : '-') + '</td>';
+  html += '<td style="min-width:100px"><div class="progress-bar-wrap"><div class="progress-bar ' + (!isDone?'running':'') + '" style="width:' + (isDone?pct:evPct) + '%"></div></div></td>';
+  html += '<td><button onclick="togglePanel(\'' + query.replace(/'/g,"\\'") + '\')" style="padding:3px 10px;font-size:11px;background:#f0f0f0;color:#333;border:none;border-radius:6px;cursor:pointer">details</button></td>';
+  row.innerHTML = html;
 }
 
 function updatePanel(query) {
-  const s = state[query];
-  const id = qid(query);
-  const panel = document.getElementById('panel-' + id);
+  var s = state[query];
+  var id = qid(query);
+  var panel = document.getElementById('panel-' + id);
   if (!panel) return;
 
-  const goodCount = Object.values(s.evaluations).filter(e => e.match).length;
-  const total = s.profiles.length;
-  const hdr = panel.querySelector('.panel-badge');
+  var goodCount = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
+  var total = s.profiles.length;
+  var hdr = panel.querySelector('.panel-badge');
   if (hdr) {
-    hdr.textContent = s.status === 'done' ? `${goodCount}/${total} fits` : s.status;
+    hdr.textContent = s.status === 'done' ? goodCount+'/'+total+' fits' : s.status;
     hdr.className = 'badge ' + (s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : 'info');
   }
 
-  const logEl = panel.querySelector('.mini-log');
-  if (logEl) logEl.innerHTML = s.logs.map(l => `<div>${l}</div>`).join('');
+  var logEl = panel.querySelector('.mini-log');
+  if (logEl) logEl.innerHTML = s.logs.map(function(l){return '<div>'+l+'</div>';}).join('');
 
-  const profilesEl = panel.querySelector('.profiles-mini');
+  var profilesEl = panel.querySelector('.profiles-mini');
   if (!profilesEl) return;
 
-  profilesEl.innerHTML = s.profiles.slice(0, 100).map((p, i) => {
-    const ev = s.evaluations[i];
-    const fit = ev?.match;
-    const pending = ev === undefined;
-    const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
-    const skills = extractSkills(p);
-    const avatarCls = pending ? 'pending' : fit ? 'fit' : 'nofit';
-    const cardCls = pending ? '' : fit ? 'fit' : 'nofit';
-
-    return `
-      <div class="profile-card ${cardCls}">
-        <div class="profile-card-header">
-          <div class="avatar-mini ${avatarCls}">${i+1}</div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div class="profile-name">${name}</div>
-              ${p.id ? `<a href="https://matching.turing.com/developer/${p.id}" target="_blank" style="font-size:10px;color:#1a56cc;text-decoration:none;white-space:nowrap;flex-shrink:0">↗ profile</a>` : ''}
-            </div>
-            <div class="profile-skills">${skills}</div>
-          </div>
-          <span class="badge ${pending ? 'neutral' : fit ? 'success' : 'danger'}">${pending ? '…' : fit ? 'fit' : 'no fit'}</span>
-        </div>
-        ${ev?.reason ? `
-          <div class="reason-box ${fit ? 'fit' : 'nofit'}">
-            <div class="reason-label">${fit ? '✓ Why fit' : '✗ Why not fit'}</div>
-            ${ev.reason}
-          </div>` : ''}
-      </div>
-    `;
+  profilesEl.innerHTML = s.profiles.slice(0, 100).map(function(p, i) {
+    var ev = s.evaluations[i];
+    var fit = ev && ev.match;
+    var pending = ev === undefined;
+    var name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
+    var skills = extractSkills(p);
+    var avatarCls = pending ? 'pending' : fit ? 'fit' : 'nofit';
+    var cardCls = pending ? '' : fit ? 'fit' : 'nofit';
+    var profileLink = p.id ? '<a href="https://matching.turing.com/developer/'+p.id+'" target="_blank" style="font-size:10px;color:#1a56cc;text-decoration:none;white-space:nowrap;flex-shrink:0">profile</a>' : '';
+    var reasonHtml = '';
+    if (ev && ev.reason) {
+      reasonHtml = '<div class="reason-box ' + (fit?'fit':'nofit') + '"><div class="reason-label">' + (fit ? 'Why fit' : 'Why not fit') + '</div>' + ev.reason + '</div>';
+    }
+    return '<div class="profile-card ' + cardCls + '">' +
+      '<div class="profile-card-header">' +
+        '<div class="avatar-mini ' + avatarCls + '">' + (i+1) + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<div class="profile-name">' + name + '</div>' +
+            profileLink +
+          '</div>' +
+          '<div class="profile-skills">' + skills + '</div>' +
+        '</div>' +
+        '<span class="badge ' + (pending?'neutral':fit?'success':'danger') + '">' + (pending?'...':fit?'fit':'no fit') + '</span>' +
+      '</div>' +
+      reasonHtml +
+    '</div>';
   }).join('');
 }
 
 function togglePanel(query) {
-  const body = document.querySelector('#panel-' + qid(query) + ' .query-panel-body');
+  var body = document.querySelector('#panel-' + qid(query) + ' .query-panel-body');
   if (body) body.classList.toggle('open');
 }
 
 function initUI(queries) {
-  const tbody = document.getElementById('summary-tbody');
+  var tbody = document.getElementById('summary-tbody');
   tbody.innerHTML = '';
-  queries.forEach(q => {
-    const tr = document.createElement('tr');
+  queries.forEach(function(q) {
+    var tr = document.createElement('tr');
     tr.id = 'row-' + qid(q);
     tbody.appendChild(tr);
   });
   document.getElementById('summary-card').style.display = '';
 
-  const panelsEl = document.getElementById('query-panels');
+  var panelsEl = document.getElementById('query-panels');
   panelsEl.innerHTML = '';
-  queries.forEach(q => {
-    const div = document.createElement('div');
+  queries.forEach(function(q) {
+    var div = document.createElement('div');
     div.className = 'query-panel';
     div.id = 'panel-' + qid(q);
-    div.innerHTML = `
-      <div class="query-panel-header" onclick="togglePanel('${q.replace(/'/g,"\\'")}')">
-        <span class="query-panel-title">${q}</span>
-        <span class="badge info panel-badge">queued</span>
-      </div>
-      <div class="query-panel-body">
-        <div class="mini-log"></div>
-        <div class="profiles-mini"></div>
-      </div>
-    `;
+    div.innerHTML = '<div class="query-panel-header" onclick="togglePanel(\'' + q.replace(/'/g,"\\'") + '\')">' +
+      '<span class="query-panel-title">' + q + '</span>' +
+      '<span class="badge info panel-badge">queued</span>' +
+      '</div>' +
+      '<div class="query-panel-body"><div class="mini-log"></div><div class="profiles-mini"></div></div>';
     panelsEl.appendChild(div);
   });
   document.getElementById('panels-section').style.display = '';
 }
 
 async function runQuery(query, token, pageSize, runId) {
-  const s = state[query];
+  var s = state[query];
   s.status = 'searching';
   s.logs = [];
+  s.domain = null;
+  s.subdomain = null;
 
   function log(msg) {
-    const t = new Date().toLocaleTimeString();
-    s.logs.push(`[${t}] ${msg}`);
+    var t = new Date().toLocaleTimeString();
+    s.logs.push('[' + t + '] ' + msg);
     updatePanel(query);
     updateSummaryRow(query);
   }
 
-  log(`Searching "${query}"…`);
+  log('Searching "' + query + '"...');
 
   try {
-    const params = new URLSearchParams({ token, query, pageSize, page: '1' });
-    const res = await fetch(`${PROXY}/api/search?${params}`);
-    if (!res.ok) { const t = await res.text(); throw new Error(`HTTP ${res.status}: ${t.slice(0,200)}`); }
-    const data = await res.json();
-    s.profiles = data?.results || data?.talents || data?.data || [];
-    log(`Got ${s.profiles.length} profiles.`);
+    var params = new URLSearchParams({ token: token, query: query, pageSize: pageSize, page: '1' });
+    var res = await fetch(PROXY + '/api/search?' + params);
+    if (!res.ok) { var t = await res.text(); throw new Error('HTTP ' + res.status + ': ' + t.slice(0,200)); }
+    var data = await res.json();
+    s.profiles = data.results || data.talents || data.data || [];
+    log('Got ' + s.profiles.length + ' profiles.');
     updatePanel(query);
     updateSummaryRow(query);
     if (!s.profiles.length) { s.status = 'done'; updateSummaryRow(query); updatePanel(query); return; }
   } catch(e) {
-    s.status = 'error'; log(`Search error: ${e.message}`);
+    s.status = 'error'; log('Search error: ' + e.message);
     updateSummaryRow(query); updatePanel(query); return;
   }
 
   s.status = 'evaluating';
-  log(`Evaluating ${Math.min(s.profiles.length, 100)} profiles…`);
+  log('Evaluating ' + Math.min(s.profiles.length, 100) + ' profiles...');
   updateSummaryRow(query);
 
-  const toEval = s.profiles.slice(0, 100);
-  const BATCH = 10;
+  var toEval = s.profiles.slice(0, 100);
+  var BATCH = 10;
 
-  for (let i = 0; i < toEval.length; i += BATCH) {
-    const batch = toEval.slice(i, i + BATCH).map((p, j) => ({ ...p, _idx: i + j }));
+  for (var i = 0; i < toEval.length; i += BATCH) {
+    var batch = toEval.slice(i, i + BATCH).map(function(p, j) {
+      return Object.assign({}, p, { _idx: i + j });
+    });
     try {
-      const res = await fetch(`${PROXY}/api/evaluate`, {
+      var res2 = await fetch(PROXY + '/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, profiles: batch, runId }),
+        body: JSON.stringify({ query: query, profiles: batch, runId: runId }),
       });
-      const data = await res.json();
-      for (const item of (data.results || [])) {
-        s.evaluations[item.index] = { match: item.match, reason: item.reason };
+      var data2 = await res2.json();
+
+      // Capture domain/subdomain from first batch that returns it
+      if (data2.query_domain && !s.domain) {
+        s.domain = data2.query_domain;
+        s.subdomain = data2.query_subdomain;
       }
-      const good = Object.values(s.evaluations).filter(e => e.match).length;
-      log(`Batch ${Math.floor(i/BATCH)+1}/${Math.ceil(toEval.length/BATCH)} — ${good} fits so far.`);
+
+      (data2.results || []).forEach(function(item) {
+        s.evaluations[item.index] = { match: item.match, reason: item.reason };
+      });
+      var good = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
+      log('Batch ' + (Math.floor(i/BATCH)+1) + '/' + Math.ceil(toEval.length/BATCH) + ' - ' + good + ' fits so far.');
       updatePanel(query);
       updateSummaryRow(query);
     } catch(e) {
-      log(`Batch error: ${e.message}`);
+      log('Batch error: ' + e.message);
     }
   }
 
-  const good = Object.values(s.evaluations).filter(e => e.match).length;
+  var good = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
+  var total = toEval.length;
+  var matchRate = total > 0 ? Math.round(good / total * 100) : 0;
   s.status = 'done';
-  log(`Done. ${good}/${toEval.length} good fits.`);
+  log('Done. ' + good + '/' + total + ' good fits.');
   updatePanel(query);
   updateSummaryRow(query);
+
+  // Save run summary to Supabase
+  try {
+    await fetch(PROXY + '/api/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: runId,
+        query: query,
+        queryDomain: s.domain,
+        querySubdomain: s.subdomain,
+        totalResults: total,
+        goodFits: good,
+        matchRate: matchRate,
+      }),
+    });
+  } catch(e) {
+    log('Warning: could not save run summary: ' + e.message);
+  }
 }
 
 async function runAll() {
-  const token = document.getElementById('token').value.trim();
-  const rawQueries = document.getElementById('queries').value.trim();
-  const pageSize = document.getElementById('pageSize').value;
+  var token = document.getElementById('token').value.trim();
+  var rawQueries = document.getElementById('queries').value.trim();
+  var pageSize = document.getElementById('pageSize').value;
 
   showError('');
   if (!token) { showError('JWT token is required.'); return; }
   if (!rawQueries) { showError('At least one query is required.'); return; }
 
-  const queries = rawQueries.split('\n').map(q => q.trim()).filter(Boolean).slice(0, 10);
+  var queries = rawQueries.split('\n').map(function(q){return q.trim();}).filter(Boolean).slice(0, 10);
   if (!queries.length) { showError('No valid queries found.'); return; }
 
-  const runId = 'run_' + Date.now();
-  document.getElementById('run-id-box').textContent = `Run ID: ${runId} — use this to query results in Supabase`;
-  document.getElementById('run-id-box').style.display = '';
+  var runId = 'run_' + Date.now();
+  var box = document.getElementById('run-id-box');
+  box.textContent = 'Run ID: ' + runId + ' - use this to query results in Supabase';
+  box.style.display = '';
 
-  queries.forEach(q => {
-    state[q] = { status: 'queued', profiles: [], evaluations: {}, logs: [] };
+  queries.forEach(function(q) {
+    state[q] = { status: 'queued', profiles: [], evaluations: {}, logs: [], domain: null, subdomain: null };
   });
 
   initUI(queries);
   setGlobalStatus('running');
-  queries.forEach(q => { updateSummaryRow(q); updatePanel(q); });
+  queries.forEach(function(q) { updateSummaryRow(q); updatePanel(q); });
 
-  await Promise.all(queries.map(q => runQuery(q, token, pageSize, runId)));
+  await Promise.all(queries.map(function(q) { return runQuery(q, token, pageSize, runId); }));
   setGlobalStatus('done');
 }
 </script>
