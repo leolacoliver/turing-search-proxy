@@ -74,7 +74,7 @@
 
     <div class="row">
       <div class="field">
-        <label>Search Queries - one per line (up to 10)</label>
+        <label>Search Queries - one per line (up to 20)</label>
         <textarea id="queries" rows="6" placeholder="python 5+ years&#10;react senior developer"></textarea>
       </div>
       <div class="field">
@@ -325,25 +325,25 @@ async function runQuery(query, token, pageSize, runId) {
     updateSummaryRow(query); updatePanel(query); return;
   }
 
-  // 2. Evaluate in batches
+  // 2. Evaluate in batches — sequential with retry and pause between batches
   s.status = 'evaluating';
-  log('Evaluating ' + Math.min(s.profiles.length, 100) + ' profiles...');
+  log('Evaluating ' + Math.min(s.profiles.length, 100) + ' profiles (sequential, with retry)...');
   updateSummaryRow(query);
 
   var toEval = s.profiles.slice(0, 100);
   var BATCH = 5;
   var totalBatches = Math.ceil(toEval.length / BATCH);
+  var MAX_RETRIES = 4;
+  var PAUSE_MS = 1500; // pause between batches to avoid rate limits
 
   for (var i = 0; i < toEval.length; i += BATCH) {
     var batch = toEval.slice(i, i + BATCH).map(function(p, j) {
       return Object.assign({}, p, { _idx: i + j });
     });
-
     var batchNum = Math.floor(i / BATCH) + 1;
-    var maxRetries = 3;
-    var success = false;
+    var savedBatch = false;
 
-    for (var attempt = 1; attempt <= maxRetries; attempt++) {
+    for (var attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         var res2 = await fetch(PROXY + '/api/evaluate', {
           method: 'POST',
@@ -352,11 +352,15 @@ async function runQuery(query, token, pageSize, runId) {
         });
         var data2 = await res2.json();
 
-        if (!res2.ok || !data2.results || data2.results.length < batch.length) {
-          throw new Error('Incomplete response: got ' + (data2.results ? data2.results.length : 0) + ' of ' + batch.length);
+        // Validate completeness
+        if (!res2.ok || !data2.results) {
+          throw new Error('API error: ' + (data2.error || res2.status));
+        }
+        if (data2.results.length < batch.length) {
+          throw new Error('Incomplete: got ' + data2.results.length + ' of ' + batch.length);
         }
 
-        // Capture domain/subdomain from any batch that returns it
+        // Capture domain/subdomain
         if (data2.query_domain && !s.domain) {
           s.domain = data2.query_domain;
           s.subdomain = data2.query_subdomain || null;
@@ -366,21 +370,27 @@ async function runQuery(query, token, pageSize, runId) {
           s.evaluations[item.index] = { match: item.match, reason: item.reason };
         });
 
-        var evKeys = Object.keys(s.evaluations);
-        var good = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
-        log('Batch ' + batchNum + '/' + totalBatches + ' - ' + good + ' fits so far.');
+        var good = Object.keys(s.evaluations).filter(function(k){ return s.evaluations[k].match; }).length;
+        log('Batch ' + batchNum + '/' + totalBatches + ' OK - ' + good + ' fits so far.');
         updatePanel(query);
         updateSummaryRow(query);
-        success = true;
+        savedBatch = true;
         break;
+
       } catch (e) {
-        if (attempt < maxRetries) {
-          log('Batch ' + batchNum + ' attempt ' + attempt + ' failed, retrying... (' + e.message + ')');
-          await new Promise(function(r) { setTimeout(r, 1000 * attempt); });
+        var waitMs = PAUSE_MS * attempt;
+        if (attempt < MAX_RETRIES) {
+          log('Batch ' + batchNum + ' attempt ' + attempt + ' failed (' + e.message + ') — retrying in ' + (waitMs/1000) + 's...');
+          await new Promise(function(r){ setTimeout(r, waitMs); });
         } else {
-          log('Batch ' + batchNum + ' failed after ' + maxRetries + ' attempts: ' + e.message);
+          log('Batch ' + batchNum + ' FAILED after ' + MAX_RETRIES + ' attempts: ' + e.message);
         }
       }
+    }
+
+    // Pause between batches to avoid rate limits (except after last batch)
+    if (i + BATCH < toEval.length) {
+      await new Promise(function(r){ setTimeout(r, PAUSE_MS); });
     }
   }
 
@@ -430,7 +440,7 @@ async function runAll() {
 
   if (!rawQueries) { showError('At least one query is required.'); return; }
 
-  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 10);
+  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 20);
   if (!queries.length) { showError('No valid queries found.'); return; }
 
   var runId = 'run_' + Date.now();
