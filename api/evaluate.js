@@ -134,7 +134,7 @@ ${text}`;
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 4000,
+        max_tokens: 8000,
         temperature: 0,
       }),
     });
