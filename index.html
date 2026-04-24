@@ -329,7 +329,7 @@ async function runQuery(query, token, pageSize, runId) {
   updateSummaryRow(query);
 
   var toEval = s.profiles.slice(0, 100);
-  var BATCH = 10;
+  var BATCH = 5;
   var totalBatches = Math.ceil(toEval.length / BATCH);
 
   for (var i = 0; i < toEval.length; i += BATCH) {
@@ -337,32 +337,48 @@ async function runQuery(query, token, pageSize, runId) {
       return Object.assign({}, p, { _idx: i + j });
     });
 
-    try {
-      var res2 = await fetch(PROXY + '/api/evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query, profiles: batch, runId: runId })
-      });
-      var data2 = await res2.json();
+    var batchNum = Math.floor(i / BATCH) + 1;
+    var maxRetries = 3;
+    var success = false;
 
-      // Capture domain/subdomain from any batch that returns it
-      if (data2.query_domain && !s.domain) {
-        s.domain = data2.query_domain;
-        s.subdomain = data2.query_subdomain || null;
+    for (var attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        var res2 = await fetch(PROXY + '/api/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query, profiles: batch, runId: runId })
+        });
+        var data2 = await res2.json();
+
+        if (!res2.ok || !data2.results || data2.results.length < batch.length) {
+          throw new Error('Incomplete response: got ' + (data2.results ? data2.results.length : 0) + ' of ' + batch.length);
+        }
+
+        // Capture domain/subdomain from any batch that returns it
+        if (data2.query_domain && !s.domain) {
+          s.domain = data2.query_domain;
+          s.subdomain = data2.query_subdomain || null;
+        }
+
+        data2.results.forEach(function(item) {
+          s.evaluations[item.index] = { match: item.match, reason: item.reason };
+        });
+
+        var evKeys = Object.keys(s.evaluations);
+        var good = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
+        log('Batch ' + batchNum + '/' + totalBatches + ' - ' + good + ' fits so far.');
+        updatePanel(query);
+        updateSummaryRow(query);
+        success = true;
+        break;
+      } catch (e) {
+        if (attempt < maxRetries) {
+          log('Batch ' + batchNum + ' attempt ' + attempt + ' failed, retrying... (' + e.message + ')');
+          await new Promise(function(r) { setTimeout(r, 1000 * attempt); });
+        } else {
+          log('Batch ' + batchNum + ' failed after ' + maxRetries + ' attempts: ' + e.message);
+        }
       }
-
-      (data2.results || []).forEach(function(item) {
-        s.evaluations[item.index] = { match: item.match, reason: item.reason };
-      });
-
-      var evKeys = Object.keys(s.evaluations);
-      var good = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
-      var batchNum = Math.floor(i / BATCH) + 1;
-      log('Batch ' + batchNum + '/' + totalBatches + ' - ' + good + ' fits so far.');
-      updatePanel(query);
-      updateSummaryRow(query);
-    } catch (e) {
-      log('Batch error: ' + e.message);
     }
   }
 
