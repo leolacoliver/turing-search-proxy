@@ -82,9 +82,9 @@ ${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
 `.trim();
   }).join("\n\n");
 
-  // Domain/subdomain classification list
   const domainContext = `
-Domain and subdomain reference:
+Domain and subdomain classification reference:
+
 - Domain "SWE Bench" → subdomains: Python, JavaScript, Java, C++, Rust, Ruby, Go, C#, DE/DS
 - Domain "Python/FastAPI BE Developer" → subdomains: FastAPI Developer
 - Domain "Prompt & Verifier Role" → subdomains: Prompt & Verifier Role
@@ -94,7 +94,11 @@ Domain and subdomain reference:
 - Domain "STEM (Global)" → subdomains: Physics, Chemistry, Biology, Math
 - Domain "STEM (US)" → subdomains: Physics, Chemistry, Biology, Math
 - Domain "Multi-Modal" → subdomains: Video Annotation, Vision Document Understanding, Vision Image Understanding, Content, Business Analyst, Business Analyst + Multi-Lingual, Audio - Studio Quality
-- Domain "Unknown" → if none of the above match
+- Domain "Legal" → subdomains: Contract Review, Legal Research, Compliance, Litigation, Intellectual Property, Corporate Law, General Legal
+- Domain "Medicine" → subdomains: Clinical Research, Medical Writing, Diagnosis Support, Surgery, Pharmacology, Public Health, General Medicine
+- Domain "Finance" → subdomains: Financial Modeling, Valuation, Economic Analysis, Risk Management, Investment, Accounting, General Finance
+- Domain "Education" → subdomains: Curriculum Design, Tutoring, Academic Research, Instructional Design, General Education
+- Domain "Unknown" → if none of the above clearly match
 `.trim();
 
   const prompt = `You are an expert talent recruiter evaluating candidates for the following search query: "${query}".
@@ -110,8 +114,9 @@ Rules:
 - No fit (match: false): clearly state what is missing or insufficient (e.g. "only 1yr Python, query requires 5+", "no Django experience found").
 - Be concise but specific. No vague praise or filler.
 - No preamble, no trailing commentary.
+- You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
 
-Reply ONLY with this JSON structure:
+Reply ONLY with this exact JSON structure:
 {
   "query_domain": "domain name",
   "query_subdomain": "subdomain name",
@@ -145,10 +150,17 @@ ${text}`;
     const raw = llmData?.choices?.[0]?.message?.content || "";
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
 
+    if (!parsed.results || parsed.results.length !== profiles.length) {
+      return res.status(422).json({
+        error: `Incomplete response: got ${parsed.results?.length || 0} of ${profiles.length} results`,
+        partial: parsed,
+      });
+    }
+
     const queryDomain = parsed.query_domain || "Unknown";
     const querySubdomain = parsed.query_subdomain || "Unknown";
 
-    const remapped = (parsed.results || []).map(item => ({
+    const remapped = parsed.results.map(item => ({
       ...item,
       index: indexMap[item.index] ?? item.index,
       query_domain: queryDomain,
@@ -158,7 +170,9 @@ ${text}`;
     // Save to Supabase
     if (supabaseUrl && supabaseKey && runId) {
       const rows = remapped.map(item => {
-        const p = profiles.find(pr => (pr._idx ?? 0) === item.index) || profiles.find((_, j) => indexMap[j] === item.index) || {};
+        const p = profiles.find(pr => (pr._idx ?? 0) === item.index)
+          || profiles.find((_, j) => indexMap[j] === item.index)
+          || {};
         const name = p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim() || "Unknown";
         return {
           run_id: runId,
@@ -183,7 +197,11 @@ ${text}`;
       });
     }
 
-    return res.status(200).json({ results: remapped, query_domain: queryDomain, query_subdomain: querySubdomain });
+    return res.status(200).json({
+      results: remapped,
+      query_domain: queryDomain,
+      query_subdomain: querySubdomain,
+    });
   } catch (err) {
     return res.status(500).json({ error: "LLM error", details: err.message });
   }
