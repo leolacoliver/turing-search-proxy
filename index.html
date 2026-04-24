@@ -48,7 +48,7 @@
   .avatar-mini.pending { background: #f0f0f0; color: #888; }
   .avatar-mini.fit    { background: #d4edda; color: #155724; }
   .avatar-mini.nofit  { background: #f8d7da; color: #721c24; }
-  .profile-name { font-weight: 500; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-name { font-weight: 500; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .profile-skills { font-size: 11px; color: #888; margin-top: 2px; }
   .reason-box { margin-top: 7px; padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.5; }
   .reason-box.fit   { background: #d4edda; color: #155724; }
@@ -68,12 +68,12 @@
   <div class="card">
     <div class="field">
       <label>JWT Token</label>
-      <textarea id="token" rows="3" placeholder="Paste your Bearer token here (without 'Bearer ')..."></textarea>
+      <textarea id="token" rows="3" placeholder="Paste your Bearer token here (without Bearer)..."></textarea>
     </div>
     <div class="row">
       <div class="field">
         <label>Search Queries - one per line (up to 10)</label>
-        <textarea id="queries" rows="6" placeholder="python 5+ years&#10;react senior developer&#10;django backend 3+ years"></textarea>
+        <textarea id="queries" rows="6" placeholder="python 5+ years&#10;react senior developer"></textarea>
       </div>
       <div class="field">
         <label>Page Size</label>
@@ -119,11 +119,11 @@
 </div>
 
 <script>
-const PROXY = window.location.origin;
-const state = {};
+var PROXY = window.location.origin;
+var state = {};
 
 function extractSkills(p) {
-  const raw = p.skills || p.topSkills || p.primarySkills || [];
+  var raw = p.skills || p.topSkills || p.primarySkills || [];
   return raw.map(function(s) {
     if (typeof s === 'string') return s;
     if (s && typeof s === 'object') return s.name || s.skill || s.title || '';
@@ -132,62 +132,84 @@ function extractSkills(p) {
 }
 
 function qid(q) {
-  return 'q' + Array.from(q).reduce(function(a,c){return a+c.charCodeAt(0);},0) + q.length;
+  var n = 0;
+  for (var i = 0; i < q.length; i++) n += q.charCodeAt(i);
+  return 'q' + n + q.length;
 }
 
 function setGlobalStatus(s) {
-  var map = { idle: ['idle','neutral'], running: ['running...','info'], done: ['all done','success'] };
-  var m = map[s] || ['idle','neutral'];
+  var labels = { idle: 'idle', running: 'running...', done: 'all done' };
+  var classes = { idle: 'neutral', running: 'info', done: 'success' };
   var b = document.getElementById('status-badge');
-  b.textContent = m[0]; b.className = 'badge ' + m[1];
+  b.textContent = labels[s] || s;
+  b.className = 'badge ' + (classes[s] || 'neutral');
   document.getElementById('run-btn').disabled = s === 'running';
 }
 
 function showError(msg) {
   var el = document.getElementById('error-box');
-  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
 }
 
 function updateSummaryRow(query) {
   var s = state[query];
   var row = document.getElementById('row-' + qid(query));
   if (!row) return;
+
   var total = s.profiles.length;
-  var evDone = Object.keys(s.evaluations).length;
-  var goodCount = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
-  var pct = total > 0 ? Math.round(goodCount / total * 100) : 0;
-  var evPct = total > 0 ? Math.round(evDone / total * 100) : 0;
+  var evKeys = Object.keys(s.evaluations);
+  var evDone = evKeys.length;
+  var goodCount = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
   var isDone = s.status === 'done' || s.status === 'error';
+
+  // Progress: during eval show % of profiles evaluated; when done show match rate
+  var progressPct = 0;
+  if (isDone && total > 0) {
+    progressPct = Math.round(goodCount / total * 100);
+  } else if (total > 0) {
+    progressPct = Math.round(evDone / total * 100);
+  }
+
+  var matchPct = total > 0 ? Math.round(goodCount / total * 100) : 0;
   var cls = s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : s.status === 'evaluating' ? 'warning' : 'info';
-  var html = '<td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + query + '</td>';
+
+  var html = '';
+  html += '<td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + query + '</td>';
   html += '<td style="font-size:12px;color:#555">' + (s.domain || '-') + '</td>';
   html += '<td style="font-size:12px;color:#555">' + (s.subdomain || '-') + '</td>';
   html += '<td><span class="badge ' + cls + '">' + s.status + '</span></td>';
   html += '<td>' + (total || '-') + '</td>';
-  html += '<td>' + (isDone ? goodCount+'/'+total : evDone > 0 ? goodCount+' so far' : '-') + '</td>';
-  html += '<td>' + (isDone || evDone > 0 ? pct+'%' : '-') + '</td>';
-  html += '<td style="min-width:100px"><div class="progress-bar-wrap"><div class="progress-bar ' + (!isDone?'running':'') + '" style="width:' + (isDone?pct:evPct) + '%"></div></div></td>';
-  html += '<td><button onclick="togglePanel(\'' + query.replace(/'/g,"\\'") + '\')" style="padding:3px 10px;font-size:11px;background:#f0f0f0;color:#333;border:none;border-radius:6px;cursor:pointer">details</button></td>';
+  html += '<td>' + (isDone ? goodCount + '/' + total : evDone > 0 ? goodCount + ' so far' : '-') + '</td>';
+  html += '<td>' + (isDone || evDone > 0 ? matchPct + '%' : '-') + '</td>';
+  html += '<td style="min-width:100px"><div class="progress-bar-wrap"><div class="progress-bar' + (isDone ? '' : ' running') + '" style="width:' + progressPct + '%"></div></div></td>';
+  html += '<td><button onclick="togglePanel(\'' + query.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')" style="padding:3px 10px;font-size:11px;background:#f0f0f0;color:#333;border:none;border-radius:6px;cursor:pointer">details</button></td>';
   row.innerHTML = html;
 }
 
 function updatePanel(query) {
   var s = state[query];
-  var id = qid(query);
-  var panel = document.getElementById('panel-' + id);
+  var panel = document.getElementById('panel-' + qid(query));
   if (!panel) return;
 
-  var goodCount = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
+  // Update header badge
+  var evKeys = Object.keys(s.evaluations);
+  var goodCount = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
   var total = s.profiles.length;
   var hdr = panel.querySelector('.panel-badge');
   if (hdr) {
-    hdr.textContent = s.status === 'done' ? goodCount+'/'+total+' fits' : s.status;
+    hdr.textContent = s.status === 'done' ? goodCount + '/' + total + ' fits' : s.status;
     hdr.className = 'badge ' + (s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : 'info');
   }
 
+  // Update log
   var logEl = panel.querySelector('.mini-log');
-  if (logEl) logEl.innerHTML = s.logs.map(function(l){return '<div>'+l+'</div>';}).join('');
+  if (logEl) {
+    logEl.innerHTML = s.logs.map(function(l) { return '<div>' + l + '</div>'; }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
 
+  // Update profiles
   var profilesEl = panel.querySelector('.profiles-mini');
   if (!profilesEl) return;
 
@@ -195,26 +217,37 @@ function updatePanel(query) {
     var ev = s.evaluations[i];
     var fit = ev && ev.match;
     var pending = ev === undefined;
-    var name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
+    var name = p.name || ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Unknown';
     var skills = extractSkills(p);
     var avatarCls = pending ? 'pending' : fit ? 'fit' : 'nofit';
     var cardCls = pending ? '' : fit ? 'fit' : 'nofit';
-    var profileLink = p.id ? '<a href="https://matching.turing.com/developer/'+p.id+'" target="_blank" style="font-size:10px;color:#1a56cc;text-decoration:none;white-space:nowrap;flex-shrink:0">profile</a>' : '';
+
+    // Profile link using candidate id
+    var profileLink = '';
+    if (p.id) {
+      profileLink = '<a href="https://matching.turing.com/developer/' + p.id + '" target="_blank" style="font-size:10px;color:#1a56cc;text-decoration:none;white-space:nowrap;margin-left:6px">profile</a>';
+    }
+
     var reasonHtml = '';
     if (ev && ev.reason) {
-      reasonHtml = '<div class="reason-box ' + (fit?'fit':'nofit') + '"><div class="reason-label">' + (fit ? 'Why fit' : 'Why not fit') + '</div>' + ev.reason + '</div>';
+      reasonHtml = '<div class="reason-box ' + (fit ? 'fit' : 'nofit') + '">' +
+        '<div class="reason-label">' + (fit ? 'Why fit' : 'Why not fit') + '</div>' +
+        ev.reason + '</div>';
     }
+
     return '<div class="profile-card ' + cardCls + '">' +
       '<div class="profile-card-header">' +
-        '<div class="avatar-mini ' + avatarCls + '">' + (i+1) + '</div>' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="display:flex;align-items:center;gap:6px">' +
+        '<div class="avatar-mini ' + avatarCls + '">' + (i + 1) + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;align-items:center;">' +
             '<div class="profile-name">' + name + '</div>' +
             profileLink +
           '</div>' +
           '<div class="profile-skills">' + skills + '</div>' +
         '</div>' +
-        '<span class="badge ' + (pending?'neutral':fit?'success':'danger') + '">' + (pending?'...':fit?'fit':'no fit') + '</span>' +
+        '<span class="badge ' + (pending ? 'neutral' : fit ? 'success' : 'danger') + '">' +
+          (pending ? '...' : fit ? 'fit' : 'no fit') +
+        '</span>' +
       '</div>' +
       reasonHtml +
     '</div>';
@@ -242,11 +275,16 @@ function initUI(queries) {
     var div = document.createElement('div');
     div.className = 'query-panel';
     div.id = 'panel-' + qid(q);
-    div.innerHTML = '<div class="query-panel-header" onclick="togglePanel(\'' + q.replace(/'/g,"\\'") + '\')">' +
-      '<span class="query-panel-title">' + q + '</span>' +
-      '<span class="badge info panel-badge">queued</span>' +
+    var safeQ = q.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    div.innerHTML =
+      '<div class="query-panel-header" onclick="togglePanel(\'' + safeQ + '\')">' +
+        '<span class="query-panel-title">' + q + '</span>' +
+        '<span class="badge info panel-badge">queued</span>' +
       '</div>' +
-      '<div class="query-panel-body"><div class="mini-log"></div><div class="profiles-mini"></div></div>';
+      '<div class="query-panel-body">' +
+        '<div class="mini-log"></div>' +
+        '<div class="profiles-mini"></div>' +
+      '</div>';
     panelsEl.appendChild(div);
   });
   document.getElementById('panels-section').style.display = '';
@@ -268,69 +306,80 @@ async function runQuery(query, token, pageSize, runId) {
 
   log('Searching "' + query + '"...');
 
+  // 1. Fetch profiles
   try {
     var params = new URLSearchParams({ token: token, query: query, pageSize: pageSize, page: '1' });
     var res = await fetch(PROXY + '/api/search?' + params);
-    if (!res.ok) { var t = await res.text(); throw new Error('HTTP ' + res.status + ': ' + t.slice(0,200)); }
+    if (!res.ok) { var txt = await res.text(); throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 200)); }
     var data = await res.json();
     s.profiles = data.results || data.talents || data.data || [];
     log('Got ' + s.profiles.length + ' profiles.');
     updatePanel(query);
     updateSummaryRow(query);
     if (!s.profiles.length) { s.status = 'done'; updateSummaryRow(query); updatePanel(query); return; }
-  } catch(e) {
-    s.status = 'error'; log('Search error: ' + e.message);
+  } catch (e) {
+    s.status = 'error';
+    log('Search error: ' + e.message);
     updateSummaryRow(query); updatePanel(query); return;
   }
 
+  // 2. Evaluate in batches
   s.status = 'evaluating';
   log('Evaluating ' + Math.min(s.profiles.length, 100) + ' profiles...');
   updateSummaryRow(query);
 
   var toEval = s.profiles.slice(0, 100);
   var BATCH = 10;
+  var totalBatches = Math.ceil(toEval.length / BATCH);
 
   for (var i = 0; i < toEval.length; i += BATCH) {
     var batch = toEval.slice(i, i + BATCH).map(function(p, j) {
       return Object.assign({}, p, { _idx: i + j });
     });
+
     try {
       var res2 = await fetch(PROXY + '/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query, profiles: batch, runId: runId }),
+        body: JSON.stringify({ query: query, profiles: batch, runId: runId })
       });
       var data2 = await res2.json();
 
-      // Capture domain/subdomain from first batch that returns it
+      // Capture domain/subdomain from any batch that returns it
       if (data2.query_domain && !s.domain) {
         s.domain = data2.query_domain;
-        s.subdomain = data2.query_subdomain;
+        s.subdomain = data2.query_subdomain || null;
       }
 
       (data2.results || []).forEach(function(item) {
         s.evaluations[item.index] = { match: item.match, reason: item.reason };
       });
-      var good = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
-      log('Batch ' + (Math.floor(i/BATCH)+1) + '/' + Math.ceil(toEval.length/BATCH) + ' - ' + good + ' fits so far.');
+
+      var evKeys = Object.keys(s.evaluations);
+      var good = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
+      var batchNum = Math.floor(i / BATCH) + 1;
+      log('Batch ' + batchNum + '/' + totalBatches + ' - ' + good + ' fits so far.');
       updatePanel(query);
       updateSummaryRow(query);
-    } catch(e) {
+    } catch (e) {
       log('Batch error: ' + e.message);
     }
   }
 
-  var good = Object.values(s.evaluations).filter(function(e){return e.match;}).length;
+  // 3. Finalize
+  var evKeys = Object.keys(s.evaluations);
+  var good = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
   var total = toEval.length;
   var matchRate = total > 0 ? Math.round(good / total * 100) : 0;
+
   s.status = 'done';
   log('Done. ' + good + '/' + total + ' good fits.');
   updatePanel(query);
   updateSummaryRow(query);
 
-  // Save run summary to Supabase
+  // 4. Save run summary to Supabase
   try {
-    await fetch(PROXY + '/api/runs', {
+    var res3 = await fetch(PROXY + '/api/runs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -340,11 +389,17 @@ async function runQuery(query, token, pageSize, runId) {
         querySubdomain: s.subdomain,
         totalResults: total,
         goodFits: good,
-        matchRate: matchRate,
-      }),
+        matchRate: matchRate
+      })
     });
-  } catch(e) {
-    log('Warning: could not save run summary: ' + e.message);
+    var data3 = await res3.json();
+    if (data3.ok) {
+      log('Saved to Supabase.');
+    } else {
+      log('Supabase save warning: ' + JSON.stringify(data3));
+    }
+  } catch (e) {
+    log('Warning: could not save to Supabase: ' + e.message);
   }
 }
 
@@ -357,12 +412,12 @@ async function runAll() {
   if (!token) { showError('JWT token is required.'); return; }
   if (!rawQueries) { showError('At least one query is required.'); return; }
 
-  var queries = rawQueries.split('\n').map(function(q){return q.trim();}).filter(Boolean).slice(0, 10);
+  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 10);
   if (!queries.length) { showError('No valid queries found.'); return; }
 
   var runId = 'run_' + Date.now();
   var box = document.getElementById('run-id-box');
-  box.textContent = 'Run ID: ' + runId + ' - use this to query results in Supabase';
+  box.textContent = 'Run ID: ' + runId;
   box.style.display = '';
 
   queries.forEach(function(q) {
