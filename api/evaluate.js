@@ -24,15 +24,20 @@ export default async function handler(req, res) {
     }).filter(Boolean).slice(0, 12).join(", ") || "—";
   }
 
-  const text = profiles.map((p) => {
+  // Build profile text using sequential 0-based index within this batch
+  // but store the global _idx so we can map back correctly
+  const indexMap = {}; // batchIndex -> globalIdx
+  const text = profiles.map((p, batchIndex) => {
+    const globalIdx = p._idx ?? batchIndex;
+    indexMap[batchIndex] = globalIdx;
     const name = p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim() || "Unknown";
     const skills = extractSkills(p);
     const exp = p.totalExperience || p.yearsOfExperience || "?";
     const title = p.title || p.designation || "";
-    return `[${p._idx ?? 0}] ${name} | ${title} | ${exp}yrs | Skills: ${skills}`;
+    return `[${batchIndex}] ${name} | ${title} | ${exp}yrs | Skills: ${skills}`;
   }).join("\n");
 
-  const prompt = `You are a expert talent recruiter, and you will evaluate talent profiles for the search query: "${query}".
+  const prompt = `You are an expert talent recruiter, and you will evaluate talent profiles for the search query: "${query}".
 For each profile, decide if it's a good fit (>=70% match).
 Your answer must be a concrete statement grounded in the candidate's fields (role, country, city, continent, years_of_experience, skills, education, work_experience, languages, certifications, publications, resume_plain_text) — not vague praise.
 - If the candidate is a weak match with less than 70%, still return the format below, but add a brief caveat (e.g., "limited evidence of X", "only adjacent to Y") where relevant.
@@ -67,7 +72,14 @@ ${text}`;
 
     const raw = llmData?.choices?.[0]?.message?.content || "";
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-    return res.status(200).json({ results: parsed });
+
+    // Remap batch index back to global index
+    const remapped = parsed.map(item => ({
+      ...item,
+      index: indexMap[item.index] ?? item.index,
+    }));
+
+    return res.status(200).json({ results: remapped });
   } catch (err) {
     return res.status(500).json({ error: "LLM error", details: err.message });
   }
