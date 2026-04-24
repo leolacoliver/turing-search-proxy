@@ -7,7 +7,7 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; padding: 2rem 1rem; }
-  .container { max-width: 900px; margin: 0 auto; }
+  .container { max-width: 1100px; margin: 0 auto; }
   h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
   .subtitle { font-size: 13px; color: #666; margin-bottom: 1.5rem; }
   .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
@@ -18,47 +18,51 @@
   .field { margin-bottom: 10px; }
   button { padding: 9px 20px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
   button:disabled { background: #999; cursor: not-allowed; }
-  .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; white-space: nowrap; }
   .badge.neutral { background: #f0f0f0; color: #666; }
-  .badge.info { background: #e8f0fe; color: #1a56cc; }
+  .badge.info    { background: #e8f0fe; color: #1a56cc; }
   .badge.warning { background: #fef3cd; color: #856404; }
   .badge.success { background: #d4edda; color: #155724; }
-  .badge.danger { background: #f8d7da; color: #721c24; }
-  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1rem; }
-  .metric { background: #f8f8f8; border-radius: 8px; padding: 10px 14px; }
-  .metric-label { font-size: 11px; color: #888; margin-bottom: 3px; }
-  .metric-value { font-size: 22px; font-weight: 600; }
-  .metric-value.small { font-size: 13px; word-break: break-all; }
-  .tabs { display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 1rem; }
-  .tab { padding: 10px 18px; font-size: 13px; cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; color: #666; }
-  .tab.active { border-bottom-color: #111; color: #111; font-weight: 500; }
-  .profiles-list { max-height: 500px; overflow-y: auto; }
-  .profile { border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; }
-  .profile.fit { border-color: #28a745; }
-  .profile.nofit { border-color: #e0e0e0; }
-  .profile-header { display: flex; align-items: center; gap: 10px; }
-  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
-  .avatar.pending { background: #f0f0f0; color: #666; }
-  .avatar.fit { background: #d4edda; color: #155724; }
-  .avatar.nofit { background: #f8d7da; color: #721c24; }
-  .profile-name { font-weight: 500; font-size: 13px; }
-  .profile-title { font-size: 12px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .profile-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 12px; color: #666; display: none; line-height: 1.8; }
-  .profile-details.open { display: block; }
-  .toggle-btn { font-size: 11px; padding: 2px 8px; background: transparent; color: #666; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
-  .log-box { font-family: monospace; font-size: 11px; color: #555; max-height: 300px; overflow-y: auto; }
-  .log-box div { padding: 1px 0; }
+  .badge.danger  { background: #f8d7da; color: #721c24; }
+
+  /* Summary table */
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table th { text-align: left; font-size: 11px; color: #888; font-weight: 500; padding: 0 12px 8px 0; border-bottom: 1px solid #eee; }
+  .summary-table td { padding: 10px 12px 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .progress-bar-wrap { background: #f0f0f0; border-radius: 99px; height: 6px; width: 100%; min-width: 80px; }
+  .progress-bar { background: #28a745; border-radius: 99px; height: 6px; transition: width 0.3s; }
+  .progress-bar.running { background: #1a56cc; }
+
+  /* Query detail panels */
+  .query-panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .query-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }
+  .query-panel-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
+  .query-panel-header:hover { background: #fafafa; }
+  .query-panel-title { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .query-panel-body { display: none; padding: 12px 16px; }
+  .query-panel-body.open { display: block; }
+  .mini-log { font-family: monospace; font-size: 10px; color: #888; max-height: 100px; overflow-y: auto; margin-bottom: 10px; }
+  .profiles-mini { max-height: 300px; overflow-y: auto; }
+  .profile-mini { border: 1px solid #e0e0e0; border-radius: 6px; padding: 7px 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .profile-mini.fit { border-color: #28a745; }
+  .profile-mini.nofit { border-color: #e0e0e0; }
+  .avatar-mini { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .avatar-mini.pending { background: #f0f0f0; color: #888; }
+  .avatar-mini.fit { background: #d4edda; color: #155724; }
+  .avatar-mini.nofit { background: #f8d7da; color: #721c24; }
+  .profile-mini-name { font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-mini-detail { font-size: 11px; color: #888; }
+
   .error-box { background: #f8d7da; color: #721c24; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; }
-  .history-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 12px; }
-  .history-row:last-child { border-bottom: none; }
-  .flex-center { display: flex; align-items: center; gap: 8px; }
   #status-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .section-title { font-size: 14px; font-weight: 500; margin-bottom: 12px; }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>Turing Search Tester</h1>
-  <p class="subtitle">Run search queries against the Turing API and evaluate profile fits with an LLM.</p>
+  <p class="subtitle">Run multiple search queries in parallel and evaluate profile fits with an LLM.</p>
 
   <div class="card">
     <div class="field">
@@ -67,8 +71,8 @@
     </div>
     <div class="row">
       <div class="field">
-        <label>Search Query</label>
-        <input id="query" type="text" value="python 5+ years">
+        <label>Search Queries — one per line (up to 10)</label>
+        <textarea id="queries" rows="6" placeholder="python 5+ years&#10;react senior developer&#10;django backend 3+ years&#10;node.js fullstack"></textarea>
       </div>
       <div class="field">
         <label>Page Size</label>
@@ -81,37 +85,42 @@
     </div>
     <div id="error-box" class="error-box" style="display:none"></div>
     <div id="status-bar">
-      <button id="run-btn" onclick="run()">Run search + evaluate</button>
+      <button id="run-btn" onclick="runAll()">Run all queries</button>
       <span id="status-badge" class="badge neutral">idle</span>
     </div>
   </div>
 
-  <div id="metrics" class="metrics" style="display:none"></div>
-
-  <div id="history-card" class="card" style="display:none">
-    <div style="font-size:13px;font-weight:500;margin-bottom:8px">Run history</div>
-    <div id="history-list"></div>
+  <!-- Summary table -->
+  <div id="summary-card" class="card" style="display:none">
+    <div class="section-title">Results summary</div>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Query</th>
+          <th>Status</th>
+          <th>Fetched</th>
+          <th>Good fits</th>
+          <th>Match rate</th>
+          <th>Progress</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="summary-tbody"></tbody>
+    </table>
   </div>
 
-  <div id="results-card" class="card" style="display:none">
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('profiles')">Profiles</button>
-      <button class="tab" onclick="switchTab('log')">Log</button>
-    </div>
-    <div id="tab-profiles">
-      <div class="profiles-list" id="profiles-list"></div>
-    </div>
-    <div id="tab-log" style="display:none">
-      <div class="log-box" id="log-list"></div>
-    </div>
+  <!-- Per-query detail panels -->
+  <div id="panels-section" style="display:none">
+    <div class="section-title" style="margin-bottom:12px">Per-query details</div>
+    <div class="query-panels" id="query-panels"></div>
   </div>
 </div>
 
 <script>
 const PROXY = window.location.origin;
-let profiles = [];
-let evaluations = {};
-let history = [];
+
+// State per query
+const state = {}; // key: query string
 
 function extractSkills(p) {
   const raw = p.skills || p.topSkills || p.primarySkills || [];
@@ -119,30 +128,19 @@ function extractSkills(p) {
     if (typeof s === 'string') return s;
     if (s && typeof s === 'object') return s.name || s.skill || s.title || '';
     return String(s);
-  }).filter(Boolean).slice(0, 12).join(', ') || '—';
+  }).filter(Boolean).slice(0, 8).join(', ') || '—';
 }
 
-function setStatus(s) {
+function setGlobalStatus(s) {
   const map = {
-    idle:       { label: 'idle',                  cls: 'neutral' },
-    running:    { label: 'searching…',            cls: 'info' },
-    evaluating: { label: 'evaluating with LLM…', cls: 'warning' },
-    done:       { label: 'done',                  cls: 'success' },
-    error:      { label: 'error',                 cls: 'danger' },
+    idle:    { label: 'idle',       cls: 'neutral' },
+    running: { label: 'running…',   cls: 'info' },
+    done:    { label: 'all done',   cls: 'success' },
   };
   const b = document.getElementById('status-badge');
-  b.textContent = map[s].label;
-  b.className = 'badge ' + map[s].cls;
-  document.getElementById('run-btn').disabled = s === 'running' || s === 'evaluating';
-}
-
-function addLog(msg) {
-  const t = new Date().toLocaleTimeString();
-  const el = document.getElementById('log-list');
-  const div = document.createElement('div');
-  div.textContent = `[${t}] ${msg}`;
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
+  b.textContent = map[s]?.label || s;
+  b.className = 'badge ' + (map[s]?.cls || 'neutral');
+  document.getElementById('run-btn').disabled = s === 'running';
 }
 
 function showError(msg) {
@@ -151,99 +149,132 @@ function showError(msg) {
   el.style.display = msg ? 'block' : 'none';
 }
 
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['profiles','log'][i] === tab));
-  document.getElementById('tab-profiles').style.display = tab === 'profiles' ? '' : 'none';
-  document.getElementById('tab-log').style.display = tab === 'log' ? '' : 'none';
+function updateSummaryRow(query) {
+  const s = state[query];
+  const row = document.getElementById('row-' + btoa(unescape(encodeURIComponent(query))).replace(/=/g,''));
+  if (!row) return;
+
+  const total = s.profiles.length;
+  const evDone = Object.keys(s.evaluations).length;
+  const goodCount = Object.values(s.evaluations).filter(e => e.match).length;
+  const pct = total > 0 ? Math.round(goodCount / total * 100) : 0;
+  const evPct = total > 0 ? Math.round(evDone / total * 100) : 0;
+  const isDone = s.status === 'done' || s.status === 'error';
+  const isRunning = !isDone;
+
+  row.innerHTML = `
+    <td style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${query}</td>
+    <td><span class="badge ${s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : s.status === 'evaluating' ? 'warning' : 'info'}">${s.status}</span></td>
+    <td>${total || '—'}</td>
+    <td>${isDone ? `${goodCount}/${total}` : evDone > 0 ? `${goodCount} so far` : '—'}</td>
+    <td>${isDone ? `${pct}%` : evDone > 0 ? `${pct}%` : '—'}</td>
+    <td style="min-width:100px">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar ${isRunning ? 'running' : ''}" style="width:${isDone ? pct : evPct}%"></div>
+      </div>
+    </td>
+    <td><button onclick="togglePanel('${query.replace(/'/g,"\\'")}') " style="padding:3px 10px;font-size:11px;background:#f0f0f0;color:#333">details</button></td>
+  `;
 }
 
-function renderProfiles() {
-  const list = document.getElementById('profiles-list');
-  list.innerHTML = '';
-  profiles.slice(0, 100).forEach((p, i) => {
-    const ev = evaluations[i];
-    const fit = ev?.match;
-    const pending = ev === undefined;
-    const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
-    const skills = extractSkills(p);
-    const exp = p.totalExperience || p.yearsOfExperience || '?';
-    const title = p.title || p.designation || '—';
+function updatePanel(query) {
+  const s = state[query];
+  const id = 'panel-' + btoa(unescape(encodeURIComponent(query))).replace(/=/g,'');
+  const panel = document.getElementById(id);
+  if (!panel) return;
 
-    const div = document.createElement('div');
-    div.className = 'profile' + (pending ? '' : fit ? ' fit' : ' nofit');
-    div.innerHTML = `
-      <div class="profile-header">
-        <div class="avatar ${pending ? 'pending' : fit ? 'fit' : 'nofit'}">${i+1}</div>
-        <div style="flex:1;min-width:0">
-          <div class="profile-name">${name}</div>
-          <div class="profile-title">${title}</div>
+  // Update header badge
+  const evDone = Object.keys(s.evaluations).length;
+  const goodCount = Object.values(s.evaluations).filter(e => e.match).length;
+  const total = s.profiles.length;
+  const hdr = panel.querySelector('.panel-badge');
+  if (hdr) {
+    hdr.textContent = s.status === 'done' ? `${goodCount}/${total} fits` : s.status;
+    hdr.className = 'badge ' + (s.status === 'done' ? 'success' : s.status === 'error' ? 'danger' : 'info');
+  }
+
+  // Update log
+  const logEl = panel.querySelector('.mini-log');
+  if (logEl) logEl.innerHTML = s.logs.map(l => `<div>${l}</div>`).join('');
+
+  // Update profiles
+  const profilesEl = panel.querySelector('.profiles-mini');
+  if (profilesEl) {
+    profilesEl.innerHTML = s.profiles.slice(0, 100).map((p, i) => {
+      const ev = s.evaluations[i];
+      const fit = ev?.match;
+      const pending = ev === undefined;
+      const name = p.name || ((p.firstName||'') + ' ' + (p.lastName||'')).trim() || 'Unknown';
+      const skills = extractSkills(p);
+      return `
+        <div class="profile-mini ${pending ? '' : fit ? 'fit' : 'nofit'}">
+          <div class="avatar-mini ${pending ? 'pending' : fit ? 'fit' : 'nofit'}">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div class="profile-mini-name">${name}</div>
+            <div class="profile-mini-detail">${skills}</div>
+            ${ev?.reason ? `<div class="profile-mini-detail" style="font-style:italic">${ev.reason}</div>` : ''}
+          </div>
+          <span class="badge ${pending ? 'neutral' : fit ? 'success' : 'danger'}" style="font-size:10px">${pending ? '…' : fit ? 'fit' : 'no'}</span>
         </div>
-        <span class="badge ${pending ? 'neutral' : fit ? 'success' : 'danger'}">${pending ? 'pending' : fit ? 'fit' : 'no fit'}</span>
-        <button class="toggle-btn" onclick="
-          var d=this.parentElement.parentElement.querySelector('.profile-details');
-          d.classList.toggle('open');
-          this.textContent=d.classList.contains('open')?'▲':'▼';
-        ">▼</button>
+      `;
+    }).join('');
+  }
+}
+
+function togglePanel(query) {
+  const id = 'panel-' + btoa(unescape(encodeURIComponent(query))).replace(/=/g,'');
+  const body = document.querySelector(`#${id} .query-panel-body`);
+  if (body) body.classList.toggle('open');
+}
+
+function initUI(queries) {
+  // Summary table rows
+  const tbody = document.getElementById('summary-tbody');
+  tbody.innerHTML = '';
+  queries.forEach(q => {
+    const id = 'row-' + btoa(unescape(encodeURIComponent(q))).replace(/=/g,'');
+    const tr = document.createElement('tr');
+    tr.id = id;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('summary-card').style.display = '';
+
+  // Per-query panels
+  const panelsEl = document.getElementById('query-panels');
+  panelsEl.innerHTML = '';
+  queries.forEach(q => {
+    const id = 'panel-' + btoa(unescape(encodeURIComponent(q))).replace(/=/g,'');
+    const div = document.createElement('div');
+    div.className = 'query-panel';
+    div.id = id;
+    div.innerHTML = `
+      <div class="query-panel-header" onclick="togglePanel('${q.replace(/'/g,"\\'")}')">
+        <span class="query-panel-title">${q}</span>
+        <span class="badge info panel-badge">queued</span>
       </div>
-      <div class="profile-details">
-        <div><strong>Skills:</strong> ${skills}</div>
-        <div><strong>Experience:</strong> ${exp} yrs</div>
-        ${ev?.reason ? `<div><strong>LLM:</strong> <em>${ev.reason}</em></div>` : ''}
+      <div class="query-panel-body">
+        <div class="mini-log"></div>
+        <div class="profiles-mini"></div>
       </div>
     `;
-    list.appendChild(div);
+    panelsEl.appendChild(div);
   });
+  document.getElementById('panels-section').style.display = '';
 }
 
-function renderMetrics(summary) {
-  const el = document.getElementById('metrics');
-  el.style.display = 'grid';
-  el.innerHTML = [
-    { label: 'query', value: summary.query, small: true },
-    { label: 'profiles evaluated', value: summary.total },
-    { label: 'good fits', value: `${summary.goodCount}/${summary.total}` },
-    { label: 'match rate', value: `${Math.round(summary.goodCount/summary.total*100)}%` },
-  ].map(m => `
-    <div class="metric">
-      <div class="metric-label">${m.label}</div>
-      <div class="metric-value ${m.small?'small':''}">${m.value}</div>
-    </div>
-  `).join('');
-}
+async function runQuery(query, token, pageSize) {
+  const s = state[query];
+  s.status = 'searching';
+  s.logs = [];
 
-function renderHistory() {
-  const card = document.getElementById('history-card');
-  if (!history.length) { card.style.display='none'; return; }
-  card.style.display = '';
-  document.getElementById('history-list').innerHTML = history.map(h => `
-    <div class="history-row">
-      <span style="font-weight:500">${h.query}</span>
-      <div class="flex-center">
-        <span class="badge success">${h.goodCount}/${h.total} fits</span>
-        <span style="color:#888">${new Date(h.timestamp).toLocaleTimeString()}</span>
-      </div>
-    </div>
-  `).join('');
-}
+  function log(msg) {
+    const t = new Date().toLocaleTimeString();
+    s.logs.push(`[${t}] ${msg}`);
+    updatePanel(query);
+    updateSummaryRow(query);
+  }
 
-async function run() {
-  const token = document.getElementById('token').value.trim();
-  const query = document.getElementById('query').value.trim();
-  const pageSize = document.getElementById('pageSize').value;
-
-  showError('');
-  if (!token) { showError('JWT token is required.'); return; }
-  if (!query)  { showError('Query is required.'); return; }
-
-  // Reset state
-  profiles = [];
-  evaluations = {};
-  document.getElementById('log-list').innerHTML = '';
-  document.getElementById('profiles-list').innerHTML = '';
-  document.getElementById('metrics').style.display = 'none';
-  document.getElementById('results-card').style.display = '';
-  setStatus('running');
-  addLog(`Searching: "${query}" (pageSize=${pageSize})`);
+  log(`Searching "${query}"…`);
 
   // 1. Search
   try {
@@ -251,20 +282,22 @@ async function run() {
     const res = await fetch(`${PROXY}/api/search?${params}`);
     if (!res.ok) { const t = await res.text(); throw new Error(`HTTP ${res.status}: ${t.slice(0,200)}`); }
     const data = await res.json();
-    profiles = data?.results || data?.talents || data?.data || [];
-    addLog(`Got ${profiles.length} profiles.`);
-    renderProfiles();
-    if (!profiles.length) { addLog('No results.'); setStatus('done'); return; }
+    s.profiles = data?.results || data?.talents || data?.data || [];
+    log(`Got ${s.profiles.length} profiles.`);
+    updatePanel(query);
+    updateSummaryRow(query);
+    if (!s.profiles.length) { s.status = 'done'; updateSummaryRow(query); updatePanel(query); return; }
   } catch(e) {
-    showError(e.message); addLog(`Search error: ${e.message}`); setStatus('error'); return;
+    s.status = 'error'; log(`Search error: ${e.message}`);
+    updateSummaryRow(query); updatePanel(query); return;
   }
 
   // 2. Evaluate
-  setStatus('evaluating');
-  addLog('Evaluating up to 100 profiles with LLM…');
+  s.status = 'evaluating';
+  log(`Evaluating ${Math.min(s.profiles.length, 100)} profiles…`);
+  updateSummaryRow(query);
 
-  const toEval = profiles.slice(0, 100);
-  let goodCount = 0;
+  const toEval = s.profiles.slice(0, 100);
   const BATCH = 10;
 
   for (let i = 0; i < toEval.length; i += BATCH) {
@@ -277,22 +310,49 @@ async function run() {
       });
       const data = await res.json();
       for (const item of (data.results || [])) {
-        evaluations[item.index] = { match: item.match, reason: item.reason };
-        if (item.match) goodCount++;
+        s.evaluations[item.index] = { match: item.match, reason: item.reason };
       }
-      renderProfiles();
-      addLog(`Batch ${Math.floor(i/BATCH)+1}/${Math.ceil(toEval.length/BATCH)} done — ${goodCount} good fits so far.`);
+      const good = Object.values(s.evaluations).filter(e => e.match).length;
+      log(`Batch ${Math.floor(i/BATCH)+1}/${Math.ceil(toEval.length/BATCH)} — ${good} fits so far.`);
+      updatePanel(query);
+      updateSummaryRow(query);
     } catch(e) {
-      addLog(`LLM batch error: ${e.message}`);
+      log(`Batch error: ${e.message}`);
     }
   }
 
-  const summary = { query, total: toEval.length, goodCount, timestamp: new Date().toISOString() };
-  history.unshift(summary);
-  renderMetrics(summary);
-  renderHistory();
-  addLog(`Done. ${goodCount}/${toEval.length} good fits for "${query}".`);
-  setStatus('done');
+  const good = Object.values(s.evaluations).filter(e => e.match).length;
+  s.status = 'done';
+  log(`Done. ${good}/${toEval.length} good fits.`);
+  updatePanel(query);
+  updateSummaryRow(query);
+}
+
+async function runAll() {
+  const token = document.getElementById('token').value.trim();
+  const rawQueries = document.getElementById('queries').value.trim();
+  const pageSize = document.getElementById('pageSize').value;
+
+  showError('');
+  if (!token) { showError('JWT token is required.'); return; }
+  if (!rawQueries) { showError('At least one query is required.'); return; }
+
+  const queries = rawQueries.split('\n').map(q => q.trim()).filter(Boolean).slice(0, 10);
+  if (!queries.length) { showError('No valid queries found.'); return; }
+
+  // Init state
+  queries.forEach(q => {
+    state[q] = { status: 'queued', profiles: [], evaluations: {}, logs: [] };
+  });
+
+  initUI(queries);
+  setGlobalStatus('running');
+  queries.forEach(q => { updateSummaryRow(q); updatePanel(q); });
+
+  // Run all in parallel
+  await Promise.all(queries.map(q => runQuery(q, token, pageSize)));
+
+  setGlobalStatus('done');
 }
 </script>
 </body>
