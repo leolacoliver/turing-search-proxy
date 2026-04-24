@@ -12,11 +12,21 @@ export default async function handler(req, res) {
   if (!query) return res.status(400).json({ error: "query is required" });
   if (!profiles || !profiles.length) return res.status(400).json({ error: "profiles is required" });
 
-  const text = profiles.map((p, i) => {
+  function extractSkills(p) {
+    const raw = p.skills || p.topSkills || p.primarySkills || [];
+    return raw.map(s => {
+      if (typeof s === "string") return s;
+      if (s && typeof s === "object") return s.name || s.skill || s.title || JSON.stringify(s);
+      return String(s);
+    }).filter(Boolean).slice(0, 12).join(", ") || "—";
+  }
+
+  const text = profiles.map((p) => {
     const name = p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim() || "Unknown";
-    const skills = (p.skills || p.topSkills || []).join(", ");
+    const skills = extractSkills(p);
     const exp = p.totalExperience || p.yearsOfExperience || "?";
-    return `[${p._idx ?? i}] ${name} | ${p.title || p.designation || ""} | ${exp}yrs | Skills: ${skills}`;
+    const title = p.title || p.designation || "";
+    return `[${p._idx ?? 0}] ${name} | ${title} | ${exp}yrs | Skills: ${skills}`;
   }).join("\n");
 
   const prompt = `You are evaluating talent profiles for the search query: "${query}".
