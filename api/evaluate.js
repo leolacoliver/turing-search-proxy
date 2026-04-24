@@ -32,8 +32,13 @@ export default async function handler(req, res) {
     return `[${p._idx ?? 0}] ${name} | ${title} | ${exp}yrs | Skills: ${skills}`;
   }).join("\n");
 
-  const prompt = `You are evaluating talent profiles for the search query: "${query}".
+  const prompt = `You are a expert talent recuiter, and you will evaluate talent profiles for the search query: "${query}".
 For each profile, decide if it's a good fit (>=70% match).
+Your answer must be a concrete statement grounded in the candidate's fields (role, country, city, continent, years_of_experience, skills, education, work_experience, languages, certifications, publications, resume_plain_text) — not vague praise.
+- If the candidate is a weak match with less than 70%, still return the format below, but add a brief caveat (e.g., "limited evidence of X", "only adjacent to Y") where relevant.
+- Do not fabricate facts that aren't present in the candidate payload.
+- No preamble, no trailing commentary.
+
 Reply ONLY with a JSON array, one object per profile, in order:
 [{"index":0,"match":true,"reason":"short reason"},...]
 
