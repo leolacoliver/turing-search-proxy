@@ -168,6 +168,16 @@ ${text}`;
       query_subdomain: querySubdomain,
     }));
 
+    // Build a lookup of candidate input text by global index for traceability
+    const inputByGlobalIdx = {};
+    const textLines = text.split("\n--- CANDIDATE [");
+    textLines.forEach(function(block, bi) {
+      if (bi === 0) return; // skip header
+      const batchIndex = parseInt(block.split("]")[0]);
+      const globalIdx = indexMap[batchIndex] ?? batchIndex;
+      inputByGlobalIdx[globalIdx] = ("--- CANDIDATE [" + block).trim();
+    });
+
     // Save to Supabase
     if (supabaseUrl && supabaseKey && runId) {
       const rows = remapped.map(item => {
@@ -183,6 +193,7 @@ ${text}`;
           position: item.index + 1,
           match: item.match,
           reason: item.reason,
+          llm_input: inputByGlobalIdx[item.index] || null,
         };
       });
 
