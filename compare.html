@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turing · LLM Comparison</title>
+<style>
+:root{--bg:#08090f;--bg2:#0f1220;--bg3:#161b2e;--border:#1e2a42;--blue:#2563eb;--blue2:#3b82f6;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--text:#f1f5f9;--text2:#94a3b8;--text3:#475569;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+nav{background:#fff;border-bottom:3px solid var(--blue);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;position:sticky;top:0;z-index:100;}
+.nav-left{display:flex;align-items:center;gap:16px;}
+.nav-badge{font-size:11px;background:#eff6ff;color:var(--blue);padding:3px 10px;border-radius:99px;font-weight:600;}
+nav a{font-size:13px;color:#374151;text-decoration:none;}
+nav a:hover{color:var(--blue);}
+.page{max-width:1400px;margin:0 auto;padding:2rem 1.5rem;}
+.page-title{font-size:22px;font-weight:700;margin-bottom:3px;}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem;}
+label{font-size:12px;color:var(--text2);display:block;margin-bottom:5px;}
+textarea,input,select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg3);color:var(--text);outline:none;}
+textarea:focus,input:focus{border-color:var(--blue);}
+textarea{resize:vertical;font-family:monospace;}
+.row{display:grid;grid-template-columns:1fr 140px;gap:12px;}
+.field{margin-bottom:10px;}
+.btn{padding:10px 22px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn:hover{background:var(--blue2);}
+.btn:disabled{background:var(--text3);cursor:not-allowed;}
+.badge{display:inline-flex;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;}
+.badge.neutral{background:var(--bg3);color:var(--text2);}
+.badge.info{background:rgba(37,99,235,.15);color:var(--blue2);}
+.badge.success{background:rgba(16,185,129,.15);color:#34d399;}
+.badge.danger{background:rgba(239,68,68,.15);color:#f87171;}
+.badge.warning{background:rgba(245,158,11,.15);color:#fbbf24;}
+#status-bar{display:flex;align-items:center;gap:10px;margin-top:12px;}
+.error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:10px;}
+
+/* SUMMARY METRICS */
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1rem;}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
+.metric-value{font-size:26px;font-weight:700;}
+.metric-value.blue{color:var(--blue2);}
+.metric-value.green{color:#34d399;}
+.metric-value.yellow{color:#fbbf24;}
+
+/* COMPARISON TABLE */
+.compare-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;font-size:10px;color:var(--text3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr.agree-good{background:rgba(16,185,129,.04);}
+tr.agree-bad{background:rgba(239,68,68,.04);}
+tr.disagree{background:rgba(245,158,11,.06);}
+tr:hover td{background:var(--bg3);}
+.verdict-good{color:#34d399;font-weight:600;}
+.verdict-bad{color:#f87171;font-weight:600;}
+.reason-cell{max-width:280px;color:var(--text2);font-size:11px;line-height:1.5;}
+.name-cell{font-weight:500;white-space:nowrap;}
+.profile-link{font-size:10px;color:var(--blue2);text-decoration:none;margin-left:6px;}
+.disagree-icon{font-size:14px;}
+
+/* FILTER TABS */
+.tabs{display:flex;gap:8px;margin-bottom:1rem;}
+.tab{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+.section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:.75rem;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
+      <svg width="90" height="14" viewBox="0 0 796 125" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M372.049 19.9146V49.5709C372.049 56.713 373.984 62.216 377.991 65.9214C381.987 69.6165 387.915 71.4029 395.644 71.4029C403.373 71.4029 409.301 69.6165 413.297 65.9214C417.305 62.216 419.239 56.713 419.239 49.5709V19.9146H434.469V48.3365C434.469 60.5348 431.011 69.1748 424.528 74.7837C418.023 80.4114 408.339 83.107 395.644 83.107C382.95 83.107 373.266 80.4112 366.761 74.7837C360.278 69.1748 356.819 60.5349 356.819 48.3365V19.9146H372.049ZM758.731 18.1519C772.91 18.1519 784.664 20.7989 795.881 26.4986V39.4117C783.662 32.795 772.322 29.8561 759.348 29.856C749.002 29.856 740.687 31.74 734.933 35.3033C729.143 38.8895 725.966 44.171 725.966 50.8052C725.966 57.3525 729.1 62.547 734.837 66.0669C740.536 69.5631 748.783 71.4029 759.084 71.4029C766.384 71.4029 773.243 70.4231 780.013 68.4634L780.563 68.3043V55.4224H742.564V46.0113H795.793V74.7593C784.251 80.6317 773.528 83.107 759.524 83.107C744.002 83.107 731.784 80.0566 723.469 74.4849C715.191 68.9373 710.736 60.863 710.736 50.6294C710.736 40.4369 715.15 32.3611 723.309 26.8033C731.502 21.2224 743.522 18.1519 758.731 18.1519ZM337.656 19.9146V31.3541H300.186V82.0484H284.956V31.3541H247.575V19.9146H337.656ZM505.287 19.9146C512.436 19.9146 521.076 20.2072 527.917 22.8072C531.324 24.1023 534.239 25.9547 536.303 28.5875C538.359 31.2105 539.616 34.6661 539.616 39.2564C539.616 44.8018 537.767 49.3169 534.267 52.7535C530.752 56.2055 525.511 58.6252 518.643 59.8423L517.136 60.1099L540.843 82.0484H522.083L500.746 61.3296H474.11V82.0484H458.879V19.9146H505.287ZM577.806 19.9146V82.0484H562.576V19.9146H577.806ZM618.807 19.9146L674.598 67.3492V19.9146H689.828V82.0484H671.473L617.446 35.9312V82.0484H602.214V19.9146H618.807ZM474.11 31.6187V49.6255H503.788C512.945 49.6255 517.256 49.0184 520.165 47.6109L520.173 47.606C521.599 46.8933 522.669 45.9652 523.375 44.7808C524.079 43.5991 524.385 42.2213 524.385 40.6666C524.385 39.0222 524.055 37.5775 523.317 36.3511C522.623 35.1985 521.599 34.2905 520.26 33.5943L519.98 33.4537C517.066 32.1372 512.759 31.6187 503.258 31.6187H474.11Z" fill="#0f172a"/>
+        <path d="M99.9584 0C104.509 0 108.894 0.0476822 113.282 0.158151C113.265 0.167912 110.433 0.962699 109.448 1.15663C66.8824 0.277622 29.7499 6.80093 29.7499 14.299C29.7499 22.1136 69.3435 28.45 118.183 28.45C154.57 28.45 185.822 24.9305 199.395 19.9064C195.882 29.5989 152.706 37.261 99.9564 37.261C90.3886 37.261 81.1355 37.0092 72.3769 36.5386C93.9542 46.1626 111.997 58.7936 111.997 73.1567C111.997 73.2628 112.103 96.1408 112.103 124.836C111.803 124.836 111.359 118.932 111.359 118.932C106.568 27.3503 -7.02057 43.7004 0.342999 17.7744C3.18347 7.77036 47.132 0 99.9584 0Z" fill="#2563eb"/>
+      </svg>
+    </a>
+    <span class="nav-badge">LLM Comparison</span>
+  </div>
+  <div style="display:flex;gap:16px;">
+    <a href="/">Search Tester</a>
+    <a href="/dashboard.html">Dashboard</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-title">LLM Evaluator Comparison</div>
+  <div class="page-sub">Compare our GPT-5.4-mini evaluation vs Turing's built-in GPT-5.4 evaluator for the same candidates.</div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Search queries — one per line (up to 20)</label>
+        <textarea id="queries" rows="6" placeholder="Looking for a Backend Engineer with strong experience in Java (Spring Boot) and building scalable distributed systems from LATAM&#10;python 5+ years of experience&#10;PHD in maths from top US universities"></textarea>
+      </div>
+      <div class="field">
+        <label>Page size</label>
+        <select id="pageSize">
+          <option value="36">36</option>
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+        </select>
+      </div>
+    </div>
+    <div id="error-box" class="error-box" style="display:none"></div>
+    <div id="status-bar">
+      <button class="btn" id="run-btn" onclick="runAll()">Run comparison</button>
+      <span id="status-badge" class="badge neutral">idle</span>
+    </div>
+  </div>
+
+  <div id="results" style="display:none"></div>
+</div>
+
+<script>
+var PROXY = window.location.origin;
+
+function setStatus(s, label) {
+  var b = document.getElementById('status-badge');
+  b.textContent = label || s;
+  b.className = 'badge ' + s;
+  document.getElementById('run-btn').disabled = s === 'info' || s === 'warning';
+}
+
+function showError(msg) {
+  var el = document.getElementById('error-box');
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderQueryResult(query, data, ourEvals) {
+  var turingMap = {};
+  (data.evaluations || []).forEach(function(e) { turingMap[e.resume_id] = e; });
+
+  var ourMap = {};
+  (ourEvals || []).forEach(function(e) { ourMap[e.candidate_id] = e; });
+
+  var talents = data.talents || [];
+  var total = talents.length;
+  var agreeGood = 0, agreeBad = 0, disagree = 0, onlyTuring = 0, onlyOurs = 0;
+
+  var rows = talents.map(function(t, i) {
+    var te = turingMap[t.id] || null;
+    var oe = ourMap[t.id] || null;
+
+    var tv = te ? te.verdict : null; // 'good'|'bad'
+    var ov = oe ? (oe.match ? 'good' : 'bad') : null;
+
+    var rowCls = '';
+    if (tv && ov) {
+      if (tv === ov && tv === 'good') { rowCls = 'agree-good'; agreeGood++; }
+      else if (tv === ov && tv === 'bad') { rowCls = 'agree-bad'; agreeBad++; }
+      else { rowCls = 'disagree'; disagree++; }
+    } else if (tv && !ov) { onlyTuring++; }
+    else if (!tv && ov) { onlyOurs++; }
+
+    var agreement = (tv && ov) ? (tv === ov ? '<span class="badge success">agree</span>' : '<span class="badge warning">⚡ disagree</span>') : '<span class="badge neutral">-</span>';
+    var tvHtml = tv === 'good' ? '<span class="verdict-good">good</span>' : tv === 'bad' ? '<span class="verdict-bad">bad</span>' : '<span style="color:var(--text3)">-</span>';
+    var ovHtml = ov === 'good' ? '<span class="verdict-good">good</span>' : ov === 'bad' ? '<span class="verdict-bad">bad</span>' : '<span style="color:var(--text3)">pending</span>';
+    var profileLink = '<a href="https://matching.turing.com/developer/' + t.id + '" target="_blank" class="profile-link">↗</a>';
+
+    return '<tr class="' + rowCls + '">' +
+      '<td style="color:var(--text3);font-size:11px">' + (i+1) + '</td>' +
+      '<td class="name-cell">' + escHtml(t.name) + profileLink + '</td>' +
+      '<td>' + tvHtml + '</td>' +
+      '<td class="reason-cell">' + escHtml(te ? te.reason : '-') + '</td>' +
+      '<td>' + ovHtml + '</td>' +
+      '<td class="reason-cell">' + escHtml(oe ? oe.reason : '-') + '</td>' +
+      '<td>' + agreement + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var agreePct = total > 0 ? Math.round((agreeGood + agreeBad) / total * 100) : 0;
+
+  return '<div class="card" style="margin-bottom:1.5rem">' +
+    '<div style="font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text)">' + escHtml(query) + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;margin-bottom:1rem">' +
+      '<div style="background:var(--bg3);border-radius:8px;padding:.75rem 1rem"><div class="metric-label">Candidates</div><div class="metric-value blue">' + total + '</div></div>' +
+      '<div style="background:var(--bg3);border-radius:8px;padding:.75rem 1rem"><div class="metric-label">Turing good</div><div class="metric-value green">' + Object.values(turingMap).filter(function(e){return e.verdict==='good';}).length + '</div></div>' +
+      '<div style="background:var(--bg3);border-radius:8px;padding:.75rem 1rem"><div class="metric-label">Our good</div><div class="metric-value green">' + Object.values(ourMap).filter(function(e){return e.match;}).length + '</div></div>' +
+      '<div style="background:var(--bg3);border-radius:8px;padding:.75rem 1rem"><div class="metric-label">Agreement</div><div class="metric-value ' + (agreePct >= 80 ? 'green' : 'yellow') + '">' + agreePct + '%</div></div>' +
+      '<div style="background:var(--bg3);border-radius:8px;padding:.75rem 1rem"><div class="metric-label">Disagreements</div><div class="metric-value ' + (disagree > 0 ? 'yellow' : 'green') + '">' + disagree + '</div></div>' +
+    '</div>' +
+    '<div class="compare-wrap"><table>' +
+      '<thead><tr><th>#</th><th>Candidate</th><th>Turing verdict</th><th>Turing reason</th><th>Our verdict</th><th>Our reason</th><th>Agreement</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table></div>' +
+  '</div>';
+}
+
+async function runQuery(query, pageSize) {
+  // Run both in parallel
+  var turingPromise = fetch(PROXY + '/api/turing-evaluate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: query, pageSize: pageSize })
+  }).then(function(r) { return r.json(); });
+
+  var searchPromise = fetch(PROXY + '/api/search?' + new URLSearchParams({ query: query, pageSize: pageSize, page: '1' }))
+    .then(function(r) { return r.json(); });
+
+  var turingData = await turingPromise;
+  var searchData = await searchPromise;
+
+  if (turingData.error) throw new Error('Turing API: ' + turingData.error);
+
+  var talents = turingData.talents || [];
+  if (!talents.length) return { query, turingData, ourEvals: [] };
+
+  // Run our evaluation in batches of 5
+  var ourEvals = [];
+  var BATCH = 5;
+  var toEval = talents.slice(0, 100);
+
+  for (var i = 0; i < toEval.length; i += BATCH) {
+    var batch = toEval.slice(i, i + BATCH).map(function(p, j) { return Object.assign({}, p, { _idx: i + j }); });
+    var MAX_RETRIES = 3;
+    for (var attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        var r = await fetch(PROXY + '/api/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query, profiles: batch })
+        });
+        var d = await r.json();
+        if (!r.ok || !d.results) throw new Error(d.error || r.status);
+        d.results.forEach(function(item) {
+          ourEvals.push({ candidate_id: talents[item.index] ? talents[item.index].id : null, match: item.match, reason: item.reason });
+        });
+        break;
+      } catch (e) {
+        if (attempt < MAX_RETRIES) await new Promise(function(r) { setTimeout(r, 1500 * attempt); });
+      }
+    }
+    if (i + BATCH < toEval.length) await new Promise(function(r) { setTimeout(r, 1000); });
+  }
+
+  return { query, turingData, ourEvals };
+}
+
+async function runAll() {
+  var rawQueries = document.getElementById('queries').value.trim();
+  var pageSize = document.getElementById('pageSize').value;
+  showError('');
+  if (!rawQueries) { showError('At least one query is required.'); return; }
+  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 20);
+  if (!queries.length) { showError('No valid queries.'); return; }
+
+  setStatus('info', 'running ' + queries.length + ' queries...');
+  document.getElementById('results').style.display = '';
+  document.getElementById('results').innerHTML = '<div style="color:var(--text2);font-size:13px;padding:2rem">Running comparison for ' + queries.length + ' queries in parallel...</div>';
+
+  var resultsHtml = '';
+  var allResults = await Promise.all(queries.map(function(q) {
+    return runQuery(q, parseInt(pageSize)).catch(function(e) { return { query: q, error: e.message }; });
+  }));
+
+  allResults.forEach(function(r) {
+    if (r.error) {
+      resultsHtml += '<div class="card" style="margin-bottom:1rem"><div style="font-size:14px;font-weight:600;margin-bottom:.5rem">' + escHtml(r.query) + '</div><div class="error-box" style="margin:0">Error: ' + escHtml(r.error) + '</div></div>';
+    } else {
+      resultsHtml += renderQueryResult(r.query, r.turingData, r.ourEvals);
+    }
+  });
+
+  document.getElementById('results').innerHTML = resultsHtml;
+  setStatus('success', 'done');
+}
+</script>
+</body>
+</html>
