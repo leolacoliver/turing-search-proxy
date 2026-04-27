@@ -146,10 +146,16 @@ Reply ONLY with this exact JSON structure:
   "query_domain": "domain name",
   "query_subdomain": "subdomain name",
   "results": [
-    {"index": 0, "verdict": "good", "reason": "..."},
+    {"index": 0, "score": 85, "verdict": "good", "reason": "..."},
     ...
   ]
 }
+
+Score and verdict rules:
+- score: integer 0-100 representing match percentage
+- verdict "good": score >= 75 (strong match, clear evidence)
+- verdict "borderline": score >= 60 and < 75 (partial match, missing some evidence but plausible)
+- verdict "bad": score < 60 (clearly missing core requirements)
 
 Candidates:
 ${text}`;
@@ -188,9 +194,11 @@ ${text}`;
     const remapped = parsed.results.map(item => ({
       ...item,
       index: indexMap[item.index] ?? item.index,
-      // Normalize verdict → match for UI compatibility
-      match: item.verdict === "good" || item.match === true,
+      score: item.score ?? (item.verdict === "good" ? 80 : item.verdict === "borderline" ? 67 : 30),
       verdict: item.verdict || (item.match ? "good" : "bad"),
+      // match = true only for good (>= 75%), borderline is separate
+      match: item.verdict === "good",
+      borderline: item.verdict === "borderline",
       query_domain: queryDomain,
       query_subdomain: querySubdomain,
     }));
@@ -219,6 +227,8 @@ ${text}`;
           candidate_name: name,
           position: item.index + 1,
           match: item.match,
+          verdict: item.verdict || "bad",
+          score: item.score || 0,
           reason: item.reason,
           llm_input: inputByGlobalIdx[item.index] || null,
         };
