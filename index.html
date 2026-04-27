@@ -58,15 +58,18 @@ select option{background:var(--bg3);}
 .profiles-mini{max-height:400px;overflow-y:auto;}
 .pc{border-radius:8px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border);background:var(--bg3);}
 .pc.fit{border-color:var(--green);background:rgba(16,185,129,.05);}
+.pc.borderline{border-color:var(--yellow);background:rgba(245,158,11,.04);}
 .pch{display:flex;align-items:center;gap:8px;}
 .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
 .av.pending{background:var(--bg);color:var(--text3);}
 .av.fit{background:rgba(16,185,129,.2);color:#34d399;}
+.av.borderline{background:rgba(245,158,11,.2);color:#fbbf24;}
 .av.nofit{background:rgba(239,68,68,.2);color:#f87171;}
 .pn{font-weight:500;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
 .ps{font-size:11px;color:var(--text3);margin-top:2px;}
 .rb{margin-top:7px;padding:7px 10px;border-radius:6px;font-size:11px;line-height:1.5;}
 .rb.fit{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2);}
+.rb.borderline{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2);}
 .rb.nofit{background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.15);}
 .rbl{font-weight:700;margin-bottom:2px;}
 .review-section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
@@ -135,7 +138,7 @@ select option{background:var(--bg3);}
       <thead>
         <tr>
           <th>Query</th><th>Domain</th><th>Subdomain</th><th>Status</th>
-          <th>Fetched</th><th>Good fits</th><th>Match rate</th><th>Progress</th><th></th>
+          <th>Fetched</th><th>Good / Borderline</th><th>Match rate</th><th>Progress</th><th></th>
         </tr>
       </thead>
       <tbody id="summary-tbody"></tbody>
@@ -190,6 +193,7 @@ function updateSummaryRow(query) {
   var evKeys = Object.keys(s.evaluations);
   var evDone = evKeys.length;
   var goodCount = evKeys.filter(function(k) { return s.evaluations[k].match; }).length;
+  var borderlineCount = evKeys.filter(function(k) { return s.evaluations[k].borderline; }).length;
   var isDone = s.status === 'done' || s.status === 'error';
   var progressPct = 0;
   if (isDone && total > 0) progressPct = Math.round(goodCount / total * 100);
@@ -204,7 +208,7 @@ function updateSummaryRow(query) {
     '<td style="font-size:12px;color:var(--text2)">' + (s.subdomain || '-') + '</td>' +
     '<td><span class="badge ' + cls + '">' + s.status + '</span></td>' +
     '<td>' + (total || '-') + '</td>' +
-    '<td>' + (isDone ? goodCount + '/' + total : evDone > 0 ? goodCount + ' so far' : '-') + '</td>' +
+    '<td>' + (isDone ? '<span style="color:#34d399">' + goodCount + '</span>' + (borderlineCount > 0 ? ' + <span style="color:#fbbf24">' + borderlineCount + '~</span>' : '') + '/' + total : evDone > 0 ? goodCount + ' so far' : '-') + '</td>' +
     '<td>' + (isDone || evDone > 0 ? matchPct + '%' : '-') + '</td>' +
     '<td style="min-width:100px"><div class="bar-wrap"><div class="bar ' + barCls + '" style="width:' + progressPct + '%"></div></div></td>' +
     '<td>' + detailBtn + '</td>';
@@ -233,14 +237,17 @@ function updatePanel(query) {
     var pending = ev === undefined;
     var name = p.name || ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Unknown';
     var skills = extractSkills(p);
-    var avCls = pending ? 'pending' : fit ? 'fit' : 'nofit';
-    var pcCls = pending ? '' : fit ? 'fit' : '';
+    var verdict = ev ? (ev.verdict || (fit ? 'good' : 'bad')) : null;
+    var isBorderline = ev && ev.borderline;
+    var avCls = pending ? 'pending' : fit ? 'fit' : isBorderline ? 'borderline' : 'nofit';
+    var pcCls = pending ? '' : fit ? 'fit' : isBorderline ? 'borderline' : '';
     var profileLink = p.id ? '<a href="https://matching.turing.com/developer/' + p.id + '" target="_blank" style="font-size:10px;color:var(--blue2);text-decoration:none;margin-left:6px">profile ↗</a>' : '';
     var reasonHtml = '';
     if (ev && ev.reason) {
-      var rbCls = fit ? 'fit' : 'nofit';
-      var rbLabel = fit ? 'Why fit' : 'Why not fit';
-      reasonHtml = '<div class="rb ' + rbCls + '"><div class="rbl">' + rbLabel + '</div>' + ev.reason + '</div>';
+      var rbCls = fit ? 'fit' : isBorderline ? 'borderline' : 'nofit';
+      var rbLabel = fit ? 'Why fit' : isBorderline ? 'Borderline' : 'Why not fit';
+      var scoreHtml = ev.score ? ' <span style="opacity:.7;font-size:10px">(' + ev.score + '%)</span>' : '';
+      reasonHtml = '<div class="rb ' + rbCls + '"><div class="rbl">' + rbLabel + scoreHtml + '</div>' + ev.reason + '</div>';
     }
     return '<div class="pc ' + pcCls + '">' +
       '<div class="pch">' +
@@ -249,7 +256,7 @@ function updatePanel(query) {
           '<div style="display:flex;align-items:center"><div class="pn">' + name + '</div>' + profileLink + '</div>' +
           '<div class="ps">' + skills + '</div>' +
         '</div>' +
-        '<span class="badge ' + (pending ? 'neutral' : fit ? 'success' : 'danger') + '">' + (pending ? '...' : fit ? 'fit' : 'no fit') + '</span>' +
+        '<span class="badge ' + (pending ? 'neutral' : fit ? 'success' : isBorderline ? 'warning' : 'danger') + '">' + (pending ? '...' : fit ? 'fit' : isBorderline ? 'borderline' : 'no fit') + '</span>' +
       '</div>' + reasonHtml + '</div>';
   }).join('');
 }
@@ -405,8 +412,9 @@ async function runQuery(query, pageSize, runId) {
         if (!res2.ok || !data2.results) throw new Error('API error: ' + (data2.error || res2.status));
         if (data2.results.length < batch.length) throw new Error('Incomplete: got ' + data2.results.length + ' of ' + batch.length);
         if (data2.query_domain && !s.domain) { s.domain = data2.query_domain; s.subdomain = data2.query_subdomain || null; }
-        data2.results.forEach(function(item) { s.evaluations[item.index] = { match: item.match, reason: item.reason }; });
+        data2.results.forEach(function(item) { s.evaluations[item.index] = { match: item.match, borderline: item.borderline, verdict: item.verdict || 'bad', score: item.score || 0, reason: item.reason }; });
         var good = Object.keys(s.evaluations).filter(function(k) { return s.evaluations[k].match; }).length;
+        var borderline = Object.keys(s.evaluations).filter(function(k) { return s.evaluations[k].borderline; }).length;
         log('Batch ' + batchNum + '/' + totalBatches + ' OK - ' + good + ' fits so far.');
         updatePanel(query); updateSummaryRow(query);
         break;
@@ -436,7 +444,7 @@ async function runQuery(query, pageSize, runId) {
     var res3 = await fetch(PROXY + '/api/runs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ runId: runId, query: query, queryDomain: s.domain, querySubdomain: s.subdomain, totalResults: total, goodFits: good, matchRate: matchRate })
+      body: JSON.stringify({ runId: runId, query: query, queryDomain: s.domain, querySubdomain: s.subdomain, totalResults: total, goodFits: good, borderlineFits: Object.keys(s.evaluations).filter(function(k){return s.evaluations[k].borderline;}).length, matchRate: matchRate })
     });
     var data3 = await res3.json();
     if (data3.ok) log('Saved to Supabase.');
