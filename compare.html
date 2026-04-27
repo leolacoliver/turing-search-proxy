@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+if (sessionStorage.getItem("turing_auth") !== "true") {
+  window.location.href = "/login.html?redirect=" + encodeURIComponent(window.location.pathname);
+}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Turing · LLM Comparison</title>
 <style>
@@ -67,6 +72,7 @@ tr:hover td{background:var(--bg3)!important;}
     <a href="/">Search Tester</a>
     <a href="/dashboard.html">Dashboard</a>
   </div>
+  <button onclick="sessionStorage.removeItem('turing_auth');window.location.href='/login.html'" style="font-size:12px;padding:5px 12px;background:transparent;border:1px solid #ddd;border-radius:6px;cursor:pointer;color:#666;">Logout</button>
 </nav>
 
 <div class="page">
