@@ -56,11 +56,28 @@ export default async function handler(req, res) {
     }).join(", ") || "—";
   }
 
+  function extractLanguageChallenges(p) {
+    const challenges = p.languageChallengeDetails || [];
+    if (!challenges.length) return "none";
+    return challenges.map(c =>
+      `${c.language || c.name || "?"} - ${c.status || c.result || "?"} (score: ${c.score ?? "?"}/${c.total ?? "?"})`
+    ).join("; ");
+  }
+
+  // Detect if query is BA/annotator type with language requirement
+  function isBALanguageQuery(query) {
+    const q = query.toLowerCase();
+    const isBA = /\b(ba|business analyst|data annotator|annotator|annotation|rater|content rater)\b/.test(q);
+    const hasLang = /\b(arabic|spanish|french|portuguese|german|chinese|japanese|hindi|korean|turkish|italian|dutch|polish|russian|hebrew|persian|urdu|bengali|multilingual)\b/.test(q);
+    return isBA && hasLang;
+  }
+
   const indexMap = {};
   const text = profiles.map((p, batchIndex) => {
     const globalIdx = p._idx ?? batchIndex;
     indexMap[batchIndex] = globalIdx;
     const name = p.name || ((p.firstName || "") + " " + (p.lastName || "")).trim() || "Unknown";
+    const langChallenges = extractLanguageChallenges(p);
     return `
 --- CANDIDATE [${batchIndex}] ---
 Name: ${name}
@@ -77,6 +94,7 @@ ${extractProjects(p)}
 Certifications: ${extractList(p.certifications, ["name", "title"])}
 Publications: ${extractList(p.publications, ["title", "name"])}
 Languages: ${extractList(p.languages, ["name", "language"])}
+Language Challenge Results: ${langChallenges}
 Resume:
 ${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
 `.trim();
@@ -114,6 +132,14 @@ Evaluation rules:
 - Hard constraints (YOE minimum, location, education level, specific technology) must ALL be met — failing even one = "bad".
 - Reason: <= 200 chars, name the SPECIFIC skill, constraint, or gap that decided it. No vague praise.
 - You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
+
+SPECIAL RULE — BA/Annotator with language requirement:
+If the query asks for a BA, business analyst, data annotator, content rater, annotator, or similar role AND specifies a language (e.g. "BA 3+ yrs Arabic", "annotator Portuguese speaking"):
+- The PRIMARY evaluation criterion is language proficiency, NOT work experience as a BA.
+- Mark "good" if the candidate shows CLEAR evidence of proficiency in the required language through ANY of the following: native speaker, translator, interpreter, language teacher, linguistics background, passed language challenge, or extensive work/education in the language.
+- Experience as a translator, interpreter, or language professional is FULLY VALID and should be treated as equivalent to BA experience for these queries.
+- Do NOT penalize candidates for lacking explicit BA/annotator job titles if their language proficiency is strong.
+- Only mark "bad" if there is no clear evidence of proficiency in the required language.
 
 Reply ONLY with this exact JSON structure:
 {
