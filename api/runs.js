@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (!supabaseUrl || !supabaseKey) return res.status(500).json({ error: "Supabase not configured" });
 
   const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-  const { runId, query, queryDomain, querySubdomain, totalResults, goodFits, matchRate } = body;
+  const { runId, query, queryDomain, querySubdomain, totalResults, goodFits, borderlineFits, matchRate } = body;
 
   if (!runId || !query) return res.status(400).json({ error: "runId and query are required" });
 
@@ -32,6 +32,7 @@ export default async function handler(req, res) {
         query_subdomain: querySubdomain || null,
         total_results: totalResults || 0,
         good_fits: goodFits || 0,
+        good_fits_borderline: borderlineFits || 0,
         match_rate: matchRate || 0,
       }),
     });
