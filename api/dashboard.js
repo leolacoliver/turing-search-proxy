@@ -25,12 +25,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const [runs, results] = await Promise.all([
+    const [runs, results, reviews] = await Promise.all([
       sbFetch("runs", "select=*&order=created_at.desc&limit=2000"),
       sbFetch("run_results", "select=run_id,match,reason&limit=20000"),
+      sbFetch("runs", "select=query,good_fits,good_fits_borderline,total_results,human_review,human_reviewed_by,human_reviewed_at&human_review=not.is.null&order=human_reviewed_at.desc&limit=200"),
     ]);
 
-    return res.status(200).json({ runs, results });
+    return res.status(200).json({ runs, results, reviews });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
