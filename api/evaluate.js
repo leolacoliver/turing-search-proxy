@@ -101,63 +101,128 @@ ${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
   }).join("\n\n");
 
   const domainContext = `
-Domain and subdomain classification reference:
-
-- Domain "SWE Bench" → subdomains: Python, JavaScript, Java, C++, Rust, Ruby, Go, C#, DE/DS
-- Domain "Python/FastAPI BE Developer" → subdomains: FastAPI Developer
-- Domain "Prompt & Verifier Role" → subdomains: Prompt & Verifier Role
-- Domain "Function Calling - Agentic Annotators" → subdomains: Agentic completion tasks, Agent Function call, Agentic trainer
-- Domain "Function Calling - Agentic Annotators (Multilingual)" → subdomains: Multilingual Agentic
-- Domain "MLE Bench" → subdomains: ML Eng, Data Analysts
-- Domain "STEM (Global)" → subdomains: Physics, Chemistry, Biology, Math
-- Domain "STEM (US)" → subdomains: Physics, Chemistry, Biology, Math
-- Domain "Multi-Modal" → subdomains: Video Annotation, Vision Document Understanding, Vision Image Understanding, Content, Business Analyst, Business Analyst + Multi-Lingual, Audio - Studio Quality
-- Domain "Legal" → subdomains: Contract Review, Legal Research, Compliance, Litigation, Intellectual Property, Corporate Law, General Legal
-- Domain "Medicine" → subdomains: Clinical Research, Medical Writing, Diagnosis Support, Surgery, Pharmacology, Public Health, General Medicine
-- Domain "Finance" → subdomains: Financial Modeling, Valuation, Economic Analysis, Risk Management, Investment, Accounting, General Finance
-- Domain "Education" → subdomains: Curriculum Design, Tutoring, Academic Research, Instructional Design, General Education
-- Domain "Unknown" → if none of the above clearly match
+- "SWE Bench" → Python, JavaScript, Java, C++, Rust, Ruby, Go, C#, DE/DS
+- "Python/FastAPI BE Developer" → FastAPI Developer
+- "Prompt & Verifier Role" → Prompt & Verifier Role
+- "Function Calling - Agentic Annotators" → Agentic completion tasks, Agent Function call, Agentic trainer
+- "Function Calling - Agentic Annotators (Multilingual)" → Multilingual Agentic
+- "MLE Bench" → ML Eng, Data Analysts
+- "STEM (Global)" → Physics, Chemistry, Biology, Math
+- "STEM (US)" → Physics, Chemistry, Biology, Math
+- "Multi-Modal" → Video Annotation, Vision Document Understanding, Vision Image Understanding, Content, Business Analyst, Business Analyst + Multi-Lingual, Audio
+- "Legal" → Contract Review, Legal Research, Compliance, Litigation, IP, Corporate Law, General Legal
+- "Medicine" → Clinical Research, Medical Writing, Diagnosis Support, Surgery, Pharmacology, Public Health, General Medicine
+- "Finance" → Financial Modeling, Valuation, Economic Analysis, Risk Management, Investment, Accounting, General Finance
+- "Education" → Curriculum Design, Tutoring, Academic Research, Instructional Design, General Education
+- "Unknown" → if none match
 `.trim();
 
-  const prompt = `You are an expert technical recruiter evaluating whether candidates match a search query. You are known for being STRICT and precise — you only mark "good" when there is clear, concrete evidence in the candidate data.
+  const prompt = `You are a strict relevance evaluator for a talent-search engine.
 
-First, classify this query into a domain and subdomain using this reference:
-${domainContext}
+==========
+OUTPUT FORMAT — NON-NEGOTIABLE
+==========
 
-Then, for each candidate, evaluate them against the query: "${query}"
+Reply with exactly ONE JSON object and nothing else (no markdown, no prose).
 
-Evaluation rules:
-- Mark "good" ONLY if the candidate has CLEAR, EXPLICIT evidence of the required skills/experience/constraints in their resume or work history. Vague mentions or partial matches are NOT enough.
-- Mark "bad" if: any core requirement is missing, experience is insufficient, the evidence is ambiguous, or you are not confident. DEFAULT TO "bad" ON ANY DOUBT.
-- Hard constraints (YOE minimum, location, education level, specific technology) must ALL be met — failing even one = "bad".
-- Reason: <= 200 chars, name the SPECIFIC skill, constraint, or gap that decided it. No vague praise.
-- You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
-
-SPECIAL RULE — BA/Annotator with language requirement:
-If the query asks for a BA, business analyst, data annotator, content rater, annotator, or similar role AND specifies a language (e.g. "BA 3+ yrs Arabic", "annotator Portuguese speaking"):
-- The PRIMARY evaluation criterion is language proficiency, NOT work experience as a BA.
-- Mark "good" if the candidate shows CLEAR evidence of proficiency in the required language through ANY of the following: native speaker, translator, interpreter, language teacher, linguistics background, passed language challenge, or extensive work/education in the language.
-- Experience as a translator, interpreter, or language professional is FULLY VALID and should be treated as equivalent to BA experience for these queries.
-- Do NOT penalize candidates for lacking explicit BA/annotator job titles if their language proficiency is strong.
-- Only mark "bad" if there is no clear evidence of proficiency in the required language.
-
-Reply ONLY with this exact JSON structure:
 {
-  "query_domain": "domain name",
-  "query_subdomain": "subdomain name",
+  "query_domain": "<domain>",
+  "query_subdomain": "<subdomain>",
   "results": [
-    {"index": 0, "score": 85, "verdict": "good", "reason": "..."},
+    {"index": 0, "score": <int 0-100>, "verdict": "good" | "borderline" | "bad", "reason": "<max 200 chars>"},
     ...
   ]
 }
 
-Score and verdict rules:
-- score: integer 0-100 representing match percentage
-- verdict "good": score >= 75 (strong match, clear evidence)
-- verdict "borderline": score >= 60 and < 75 (partial match, missing some evidence but plausible)
-- verdict "bad": score < 60 (clearly missing core requirements)
+Verdict rules:
+- "good": score >= 80
+- "borderline": score >= 60 and < 80
+- "bad": score < 60
 
-Candidates:
+Domain classification reference:
+${domainContext}
+
+==========
+HOW TO EVALUATE
+==========
+
+STEP 1 — Parse the query into HARD constraints and SOFT preferences.
+
+HARD constraints (failing ANY one = "bad"):
+- role / domain        e.g. "Business Analyst", "Python Developer", "Cardiologist"
+- location             e.g. "India", "LATAM", "Non-US", "Egypt"
+                       (LATAM = Mexico/Brazil/Colombia/Argentina/Chile/Peru/...
+                        Non-US = anywhere except United States)
+- minimum YOE          enforce ONLY if explicitly stated ("3+ years", "5+ years")
+                       NOTE: "junior" or "1-2 yoe" do NOT impose an upper limit on seniors
+- required language(s) e.g. "Arabic", "Portuguese + English"
+- required skills      e.g. "Python", "SQL", "Verilog", "Spring Boot"
+- rate ceiling         apply ONLY when talent.rate is non-null — null rate = skip, do NOT fail
+- degree / cert        e.g. "PhD", "CFA", "CPA", "CISSP"
+
+SOFT preferences (tie-breakers only — never fail alone):
+- vague words: "strong", "senior", "detail-oriented", "analytical", "low cost"
+
+If a constraint is genuinely ambiguous in the talent data → benefit of the doubt → treat as satisfied.
+
+STEP 2 — Identify query group and apply group-specific rules:
+
+GROUP 1 — SWE/Technical (Python, JavaScript, Java, C++, FastAPI, DevOps, SQL...):
+- All hard constraints apply strictly
+- Adjacent skills can justify "borderline" if experience is strong
+
+GROUP 2 — BA with Language (Business Analyst - Arabic, BA - Japanese...):
+- PRIMARY criterion: language proficiency — NOT BA job title
+- "good" if: native speaker, translator, interpreter, language teacher, linguistics background, or extensive work/education in that language
+- Translator/interpreter = fully equivalent to BA experience
+- Do NOT penalize for lacking BA title if language proficiency is clear
+
+GROUP 3 — AI Quality/Annotator with Language (AI Quality Analyst - Korean...):
+- Same as Group 2, even more flexible
+- Any native/fluent speaker with basic analytical ability = "good"
+- Cultural familiarity with the language/region is a positive signal
+
+GROUP 4 — STEM Expert (Physics Expert, Math Expert, Chemistry Expert...):
+- PRIMARY criterion: education level — PhD or MSc in the specific field required
+- Bachelor's in field = "borderline" at best
+- Location constraints (US vs non-US) must be met exactly
+- Field specificity matters: Physics ≠ general STEM
+- Look for specific subdomains if mentioned in query (e.g. computational modeling, quantum)
+
+GROUP 4B — STEM + Code hybrid (Computational Physics, Math & Python...):
+- Requires BOTH: strong domain education (PhD/MSc preferred) AND coding proficiency
+- Neither alone is sufficient — "borderline" if only one is present
+
+GROUP 5 — Agentic/Prompt & Verifier (Agentic completion, Function Calling...):
+- PRIMARY criterion: technical reasoning + excellent English communication
+- No specific language/framework required — any solid technical background qualifies
+- LLM/API/JSON/function-calling experience = strong positive signal
+- MORE FLEXIBLE than Group 1 — adjacent backgrounds qualify
+- YOE as stated in the query
+
+GROUP 6 — Domain Expert (Finance, Legal, Medical, Cybersecurity):
+- PRIMARY criterion: direct professional experience in the domain
+- Finance: financial analysts, CPAs, CFAs, auditors — hands-on domain work required. Apply specific constraints if query mentions certifications or market (e.g. middle market private equity)
+- Legal: lawyers, paralegals, compliance officers — law degree or bar admission preferred
+- Medical: MDs, researchers, pharmacologists — field-specific must match if stated in query
+- Cybersecurity: security engineers, SOC analysts — CISSP/CEH/similar = strong signal
+- General business experience without domain specificity = "bad"
+
+STEP 3 — Score each candidate:
+- 90-100: all hard constraints clearly met, strong evidence throughout
+- 80-89: all hard constraints met, good evidence
+- 60-79: most constraints met, minor gaps or ambiguous evidence
+- 0-59: one or more hard constraints clearly missing
+
+You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
+
+Edge cases:
+- If the query has zero hard constraints, count any talent whose role broadly fits.
+
+==========
+QUERY: "${query}"
+
+CANDIDATES:
 ${text}`;
 
   try {
