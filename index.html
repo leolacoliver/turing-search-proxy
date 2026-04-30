@@ -112,7 +112,7 @@ select option{background:var(--bg3);}
   <div class="card">
     <div class="row">
       <div class="field">
-        <label>Search Queries — one per line (up to 20)</label>
+        <label>Search Queries — one per line (up to 200)</label>
         <textarea id="queries" rows="7" placeholder="python 5+ years&#10;react senior developer&#10;django backend 3+ years"></textarea>
       </div>
       <div class="field">
@@ -457,7 +457,7 @@ async function runAll() {
   var pageSize = document.getElementById('pageSize').value;
   showError('');
   if (!rawQueries) { showError('At least one query is required.'); return; }
-  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 20);
+  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 200);
   if (!queries.length) { showError('No valid queries found.'); return; }
   var runId = 'run_' + Date.now();
   var box = document.getElementById('run-id-box');
