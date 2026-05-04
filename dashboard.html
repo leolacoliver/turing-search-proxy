@@ -90,6 +90,19 @@ tr:last-child td{border-bottom:none;}
 <div class="page">
   <div class="page-title">Search Analytics</div>
   <div class="page-sub">LLM evaluation results — good fits, borderline, and team reviews</div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:12px;color:var(--text2);">From date</label>
+      <input type="date" id="date-from" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg3);color:var(--text);outline:none;" />
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:12px;color:var(--text2);">To date</label>
+      <input type="date" id="date-to" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg3);color:var(--text);outline:none;" />
+    </div>
+    <button onclick="applyFilter()" style="padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Apply</button>
+    <button onclick="clearFilter()" style="padding:7px 16px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">Clear</button>
+    <span id="filter-label" style="font-size:12px;color:var(--text3)"></span>
+  </div>
 
   <div id="loading" class="loading">Loading dashboard data...</div>
   <div id="error" class="error-box" style="display:none"></div>
@@ -424,7 +437,16 @@ function renderReviews(reviews) {
   }
   var html = '';
   reviews.forEach(function(r) {
-    var date = r.human_reviewed_at ? new Date(r.human_reviewed_at).toLocaleString() : '—';
+    var date = '—';
+    if (r.human_reviewed_at) {
+      var d = new Date(r.human_reviewed_at);
+      var dd = String(d.getDate()).padStart(2,'0');
+      var mm = String(d.getMonth()+1).padStart(2,'0');
+      var yy = String(d.getFullYear()).slice(2);
+      var hh = String(d.getHours()).padStart(2,'0');
+      var min = String(d.getMinutes()).padStart(2,'0');
+      date = dd+'/'+mm+'/'+yy+' '+hh+':'+min;
+    }
     var goodRate = r.total_results > 0 ? Math.round((r.good_fits||0)/r.total_results*100) : 0;
     var combinedRate = r.total_results > 0 ? Math.round(((r.good_fits||0)+(r.good_fits_borderline||0))/r.total_results*100) : 0;
     html += '<div class="review-card">' +
@@ -444,6 +466,51 @@ function renderReviews(reviews) {
   el.innerHTML = html;
 }
 
+function applyFilter() {
+  var from = document.getElementById('date-from').value;
+  var to = document.getElementById('date-to').value;
+  var filtered = allRuns.filter(function(r) {
+    var d = (r.created_at||'').slice(0,10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+  var filteredResults = allResults; // results don't have dates, use all
+  var label = '';
+  if (from && to) label = 'Showing ' + formatDate(from) + ' → ' + formatDate(to);
+  else if (from) label = 'Showing from ' + formatDate(from);
+  else if (to) label = 'Showing up to ' + formatDate(to);
+  document.getElementById('filter-label').textContent = label;
+  renderKPIs(filtered, filteredResults, allReviews.filter(function(r){
+    var d = (r.human_reviewed_at||'').slice(0,10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  }));
+  renderDomainTable(filtered);
+  renderDailyTable(filtered);
+  renderChart(filtered);
+  renderProblems(filteredResults);
+}
+
+function clearFilter() {
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value = '';
+  document.getElementById('filter-label').textContent = '';
+  renderKPIs(allRuns, allResults, allReviews);
+  renderDomainTable(allRuns);
+  renderDailyTable(allRuns);
+  renderChart(allRuns);
+  renderProblems(allResults);
+  renderReviews(allReviews);
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  var parts = iso.split('-');
+  return parts[2]+'/'+parts[1]+'/'+parts[0].slice(2);
+}
+
 window.addEventListener('load', async function() {
   try {
     var res = await fetch('/api/dashboard');
@@ -455,14 +522,14 @@ window.addEventListener('load', async function() {
     allResults = data.results || [];
     allReviews = data.reviews || [];
 
+    // Default from-date to today
+    var today = new Date().toISOString().slice(0,10);
+    document.getElementById('date-from').value = today;
+
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = '';
 
-    renderKPIs(allRuns, allResults, allReviews);
-    renderDomainTable(allRuns);
-    renderDailyTable(allRuns);
-    renderChart(allRuns);
-    renderProblems(allResults);
+    applyFilter();
     renderReviews(allReviews);
   } catch(e) {
     document.getElementById('loading').style.display = 'none';
