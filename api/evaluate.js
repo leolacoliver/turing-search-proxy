@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
   function extractProjects(p) {
     return (p.projects || []).map(pr =>
-      `${pr.name || ""}: ${(pr.description || "").slice(0, 200)}`
+      `${pr.name || ""}: ${(pr.description || "").slice(0, 300)}`
     ).join("\n") || "—";
   }
 
@@ -163,7 +163,10 @@ HARD constraints (failing ANY one = "bad"):
 SOFT preferences (tie-breakers only — never fail alone):
 - vague words: "strong", "senior", "detail-oriented", "analytical", "low cost"
 
-If a constraint is genuinely ambiguous in the talent data → benefit of the doubt → treat as satisfied.
+If a constraint is explicitly stated in the query, it MUST be clearly evidenced in the candidate data.
+Benefit of the doubt applies ONLY when the query is genuinely vague or open-ended.
+When the query lists multiple requirements (e.g. "X AND Y AND Z"), ALL must be present — missing one skill only = "borderline", missing 2 or more = "bad".
+Compound requirements joined by "and", "along with", "including", "as well as" are ALL hard constraints.
 
 STEP 2 — Identify query group and apply group-specific rules:
 
@@ -233,7 +236,7 @@ ${text}`;
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-5.4-mini",
+        model: "gpt-5.4",
         messages: [{ role: "user", content: prompt }],
         max_completion_tokens: 8000,
         temperature: 0,
