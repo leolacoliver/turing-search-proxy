@@ -469,28 +469,38 @@ function renderReviews(reviews) {
 function applyFilter() {
   var from = document.getElementById('date-from').value;
   var to = document.getElementById('date-to').value;
-  var filtered = allRuns.filter(function(r) {
+
+  var filteredRuns = allRuns.filter(function(r) {
     var d = (r.created_at||'').slice(0,10);
     if (from && d < from) return false;
     if (to && d > to) return false;
     return true;
   });
-  var filteredResults = allResults; // results don't have dates, use all
-  var label = '';
-  if (from && to) label = 'Showing ' + formatDate(from) + ' → ' + formatDate(to);
-  else if (from) label = 'Showing from ' + formatDate(from);
-  else if (to) label = 'Showing up to ' + formatDate(to);
-  document.getElementById('filter-label').textContent = label;
-  renderKPIs(filtered, filteredResults, allReviews.filter(function(r){
+
+  // Filter run_ids to scope results
+  var filteredRunIds = {};
+  filteredRuns.forEach(function(r){ filteredRunIds[r.run_id] = true; });
+  var filteredResults = allResults.filter(function(r){ return filteredRunIds[r.run_id]; });
+
+  var filteredReviews = allReviews.filter(function(r) {
     var d = (r.human_reviewed_at||'').slice(0,10);
     if (from && d < from) return false;
     if (to && d > to) return false;
     return true;
-  }));
-  renderDomainTable(filtered);
-  renderDailyTable(filtered);
-  renderChart(filtered);
+  });
+
+  var label = '';
+  if (from && to) label = 'Showing ' + formatDate(from) + ' to ' + formatDate(to);
+  else if (from) label = 'Showing from ' + formatDate(from);
+  else if (to) label = 'Showing up to ' + formatDate(to);
+  document.getElementById('filter-label').textContent = label;
+
+  renderKPIs(filteredRuns, filteredResults, filteredReviews);
+  renderDomainTable(filteredRuns);
+  renderDailyTable(filteredRuns);
+  renderChart(filteredRuns);
   renderProblems(filteredResults);
+  renderReviews(filteredReviews);
 }
 
 function clearFilter() {
