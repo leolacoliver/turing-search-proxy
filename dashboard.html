@@ -392,8 +392,15 @@ function renderChart(runs) {
 }
 
 function renderProblems(results) {
-  var noFit = results.filter(function(r){ return r.match===false && r.reason; });
-  if (!noFit.length) { document.getElementById('problems').innerHTML='<p style="font-size:13px;color:var(--text2)">No rejection data yet.</p>'; return; }
+  // match can be false, null, or 0 — accept any non-good verdict with a reason
+  var noFit = results.filter(function(r){ return (r.match === false || r.match === null || r.verdict === 'bad') && r.reason; });
+  if (!noFit.length) {
+    // Fallback: use all results with reasons
+    var withReasons = results.filter(function(r){ return r.reason; });
+    if (!withReasons.length) { document.getElementById('problems').innerHTML='<p style="font-size:13px;color:var(--text2)">No rejection data yet.</p>'; return; }
+    var noFit = withReasons.filter(function(r){ return !r.match; });
+    if (!noFit.length) noFit = withReasons;
+  }
   var reasons = noFit.map(function(r){ return r.reason.toLowerCase(); });
   var patterns = [
     { label:'Insufficient years of experience', kw:['insufficient','only 1yr','only 2yr','only 3yr','lacks experience','less than','below required'] },
@@ -477,12 +484,12 @@ function applyFilter() {
     return true;
   });
 
-  // Filter results by run_id if possible, otherwise use all
+  // Filter results by run_id — normalize to string for safe comparison
   var filteredRunIds = {};
-  filteredRuns.forEach(function(r){ if (r.run_id) filteredRunIds[r.run_id] = true; });
+  filteredRuns.forEach(function(r){ if (r.run_id) filteredRunIds[String(r.run_id)] = true; });
   var hasRunIds = allResults.some(function(r){ return !!r.run_id; });
   var filteredResults = (hasRunIds && Object.keys(filteredRunIds).length > 0)
-    ? allResults.filter(function(r){ return filteredRunIds[r.run_id]; })
+    ? allResults.filter(function(r){ return filteredRunIds[String(r.run_id)]; })
     : allResults;
 
   var filteredReviews = allReviews.filter(function(r) {
