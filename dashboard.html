@@ -69,6 +69,8 @@ tr:last-child td{border-bottom:none;}
 .review-text{font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;background:var(--bg3);padding:10px 12px;border-radius:7px;border:1px solid var(--border);}
 .reviewer-badge{display:inline-block;padding:2px 8px;background:rgba(37,99,235,.15);color:var(--blue2);border-radius:99px;font-size:11px;font-weight:600;margin-left:6px;}
 
+.query-tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);margin:2px;cursor:pointer;transition:border-color .15s,color .15s;}
+.query-tag:hover{border-color:var(--blue);color:var(--blue2);}
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
 .modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:900px;padding:0;position:relative;margin:auto;}
@@ -288,7 +290,10 @@ function renderDomainTable(runs) {
       var sFits = useGood ? s.good : s.good + s.borderline;
       var sp = s.total > 0 ? Math.round(sFits/s.total*100) : 0;
       var sid2 = did + '_' + safeId(sd);
-      var queryTags = Object.keys(s.queries).map(function(q){ return '<span onclick="openQueryModal(' + JSON.stringify(q) + ')" style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);margin:2px;cursor:pointer;" onmouseover="this.style.borderColor=\'#2563eb\';this.style.color=\'#3b82f6\'" onmouseout="this.style.borderColor=\'#1e2a42\';this.style.color=\'#94a3b8\'">' + q + ' ↗</span>'; }).join('');
+      var queryTags = Object.keys(s.queries).map(function(q){
+        var escaped = q.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+        return '<span class="query-tag" data-query="' + escaped + '">' + escaped + ' ↗</span>';
+      }).join('');
       html += '<tr class="sub-row" data-parent="' + did + '" data-id="' + sid2 + '" style="display:none">' +
         '<td style="padding-left:18px">' + sd + '</td>' +
         '<td>' + s.total + '</td><td>' + sFits + '</td>' +
@@ -554,6 +559,15 @@ function closeModal() {
 }
 
 document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
+// Event delegation for query tags
+document.addEventListener('click', function(e) {
+  var tag = e.target.closest('.query-tag');
+  if (tag) {
+    var q = tag.getAttribute('data-query');
+    if (q) openQueryModal(q);
+  }
+});
 
 function applyFilter() {
   var from = document.getElementById('date-from').value;
