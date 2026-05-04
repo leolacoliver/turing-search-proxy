@@ -477,10 +477,13 @@ function applyFilter() {
     return true;
   });
 
-  // Filter run_ids to scope results
+  // Filter results by run_id if possible, otherwise use all
   var filteredRunIds = {};
-  filteredRuns.forEach(function(r){ filteredRunIds[r.run_id] = true; });
-  var filteredResults = allResults.filter(function(r){ return filteredRunIds[r.run_id]; });
+  filteredRuns.forEach(function(r){ if (r.run_id) filteredRunIds[r.run_id] = true; });
+  var hasRunIds = allResults.some(function(r){ return !!r.run_id; });
+  var filteredResults = (hasRunIds && Object.keys(filteredRunIds).length > 0)
+    ? allResults.filter(function(r){ return filteredRunIds[r.run_id]; })
+    : allResults;
 
   var filteredReviews = allReviews.filter(function(r) {
     var d = (r.human_reviewed_at||'').slice(0,10);
