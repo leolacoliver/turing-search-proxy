@@ -68,6 +68,28 @@ tr:last-child td{border-bottom:none;}
 .review-meta{font-size:11px;color:var(--text3);margin-bottom:8px;}
 .review-text{font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;background:var(--bg3);padding:10px 12px;border-radius:7px;border:1px solid var(--border);}
 .reviewer-badge{display:inline-block;padding:2px 8px;background:rgba(37,99,235,.15);color:var(--blue2);border-radius:99px;font-size:11px;font-weight:600;margin-left:6px;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:900px;padding:0;position:relative;margin:auto;}
+.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);border-radius:16px 16px 0 0;z-index:10;}
+.modal-title{font-size:14px;font-weight:700;flex:1;margin-right:1rem;}
+.modal-close{background:none;border:1px solid var(--border);color:var(--text2);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:var(--bg3);}
+.modal-body{padding:1.25rem 1.5rem;max-height:75vh;overflow-y:auto;}
+.modal-stats{display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;}
+.modal-stat{background:var(--bg3);border-radius:8px;padding:.5rem 1rem;font-size:12px;color:var(--text2);}
+.modal-stat strong{color:var(--text);font-size:14px;display:block;}
+.candidate-row{border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;margin-bottom:6px;display:flex;align-items:flex-start;gap:.75rem;}
+.candidate-row.good{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.03);}
+.candidate-row.borderline{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.03);}
+.candidate-row.bad{border-color:rgba(239,68,68,.15);background:rgba(239,68,68,.02);}
+.cand-num{font-size:11px;color:var(--text3);min-width:24px;padding-top:2px;}
+.cand-info{flex:1;min-width:0;}
+.cand-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cand-link{font-size:11px;color:var(--blue2);text-decoration:none;}
+.cand-reason{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5;}
+.cand-score{font-size:11px;color:var(--text3);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -130,7 +152,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <!-- Problems -->
       <div class="card">
-        <div class="card-title">Most common rejection reasons (WORK IN PROGRESS)</div>
+        <div class="card-title">Most common rejection reasons</div>
         <div id="problems"></div>
       </div>
     </div>
@@ -266,7 +288,7 @@ function renderDomainTable(runs) {
       var sFits = useGood ? s.good : s.good + s.borderline;
       var sp = s.total > 0 ? Math.round(sFits/s.total*100) : 0;
       var sid2 = did + '_' + safeId(sd);
-      var queryTags = Object.keys(s.queries).map(function(q){ return '<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);margin:2px">' + q + '</span>'; }).join('');
+      var queryTags = Object.keys(s.queries).map(function(q){ return '<span onclick="openQueryModal(' + JSON.stringify(q) + ')" style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);margin:2px;cursor:pointer;" onmouseover="this.style.borderColor=\'#2563eb\';this.style.color=\'#3b82f6\'" onmouseout="this.style.borderColor=\'#1e2a42\';this.style.color=\'#94a3b8\'">' + q + ' ↗</span>'; }).join('');
       html += '<tr class="sub-row" data-parent="' + did + '" data-id="' + sid2 + '" style="display:none">' +
         '<td style="padding-left:18px">' + sd + '</td>' +
         '<td>' + s.total + '</td><td>' + sFits + '</td>' +
@@ -473,6 +495,66 @@ function renderReviews(reviews) {
   el.innerHTML = html;
 }
 
+function openQueryModal(query) {
+  // Find the run for this query
+  var run = allRuns.find(function(r){ return r.query === query; });
+  if (!run) return;
+
+  // Get candidates for this run
+  var candidates = allResults.filter(function(r){ return String(r.run_id) === String(run.run_id); });
+  candidates.sort(function(a,b){ return (a.position||0)-(b.position||0); });
+
+  var good = candidates.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
+  var borderline = candidates.filter(function(c){ return c.verdict==='borderline'; }).length;
+  var bad = candidates.filter(function(c){ return c.verdict==='bad'||(!c.match&&c.verdict!=='borderline'); }).length;
+  var total = candidates.length;
+
+  document.getElementById('modal-title').textContent = query;
+  document.getElementById('modal-stats').innerHTML =
+    '<div class="modal-stat"><strong style="color:#34d399">' + good + '</strong>Good fits</div>' +
+    '<div class="modal-stat"><strong style="color:#fbbf24">' + borderline + '</strong>Borderline</div>' +
+    '<div class="modal-stat"><strong style="color:#f87171">' + bad + '</strong>Not a fit</div>' +
+    '<div class="modal-stat"><strong>' + total + '</strong>Total evaluated</div>';
+
+  var html = '';
+  // Show good first, then borderline, then bad
+  var sorted = candidates.slice().sort(function(a,b){
+    var order = {good:0, borderline:1, bad:2};
+    var av = order[a.verdict] ?? (a.match ? 0 : 2);
+    var bv = order[b.verdict] ?? (b.match ? 0 : 2);
+    return av - bv;
+  });
+
+  sorted.forEach(function(c) {
+    var v = c.verdict || (c.match ? 'good' : 'bad');
+    var vLabel = v === 'good' ? '<span class="badge green">good fit</span>' :
+                 v === 'borderline' ? '<span class="badge yellow">borderline</span>' :
+                 '<span class="badge red">not a fit</span>';
+    var profileLink = c.candidate_id ?
+      '<a href="https://matching.turing.com/developer/' + c.candidate_id + '" target="_blank" class="cand-link">profile ↗</a>' : '';
+    html += '<div class="candidate-row ' + v + '">' +
+      '<div class="cand-num">' + (c.position||'') + '</div>' +
+      '<div class="cand-info">' +
+        '<div class="cand-name">' + (c.candidate_name||'Unknown') + ' ' + profileLink + ' ' + vLabel + '</div>' +
+        '<div class="cand-reason">' + (c.reason||'No reason provided') + '</div>' +
+        (c.score ? '<div class="cand-score">Score: ' + c.score + '/100</div>' : '') +
+      '</div>' +
+    '</div>';
+  });
+
+  if (!html) html = '<p style="color:var(--text2);font-size:13px">No candidate details available. Run the query in Search Tester first.</p>';
+  document.getElementById('modal-candidates').innerHTML = html;
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
 function applyFilter() {
   var from = document.getElementById('date-from').value;
   var to = document.getElementById('date-to').value;
@@ -559,5 +641,19 @@ window.addEventListener('load', async function() {
   }
 });
 </script>
+
+<!-- Query detail modal -->
+<div id="modal-overlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Query details</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-stats" id="modal-stats"></div>
+      <div id="modal-candidates"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
