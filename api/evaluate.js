@@ -178,9 +178,10 @@ GROUP 1 — SWE/Technical (Python, JavaScript, Java, C++, FastAPI, DevOps, SQL..
 - If the primary required skill or YOE minimum is missing → "bad" immediately
 
 GROUP 2 — BA with Language (Business Analyst - Arabic, BA - Japanese...):
-- PRIMARY criterion: language proficiency — NOT BA job title
-- "good" if: native speaker, translator, interpreter, language teacher, linguistics background, or extensive work/education in that language
+- PRIMARY criterion for multilingual roles: in case the search requires language proficiency — do NOT  penalize missing a BA job title. 
+- relevant if: native speaker, translator, interpreter, language teacher, linguistics background, or extensive work/education in that language. Infer the relevant language proficiency from country.
 - Translator/interpreter = fully equivalent to BA experience
+- Follow location constraints if required on the search query.  
 - Do NOT penalize for lacking BA title if language proficiency is clear
 
 GROUP 3 — AI Quality/Annotator with Language (AI Quality Analyst - Korean...):
@@ -198,6 +199,7 @@ GROUP 4 — STEM Expert (Physics Expert, Math Expert, Chemistry Expert...):
 GROUP 4B — STEM + Code hybrid (Computational Physics, Math & Python...):
 - Requires BOTH: strong domain education (PhD/MSc preferred) AND coding proficiency
 - Neither alone is sufficient — "borderline" if only one is present
+- Follow location constraints if required by the search.
 
 GROUP 5 — Agentic/Prompt & Verifier (Agentic completion, Function Calling...):
 - PRIMARY criterion: technical reasoning + excellent English communication
