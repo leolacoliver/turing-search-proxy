@@ -112,7 +112,7 @@ select option{background:var(--bg3);}
   <div class="card">
     <div class="row">
       <div class="field">
-        <label>Search Queries — one per line (up to 200)</label>
+        <label>Search Queries — one per line (up to 20)</label>
         <textarea id="queries" rows="7" placeholder="python 5+ years&#10;react senior developer&#10;django backend 3+ years"></textarea>
       </div>
       <div class="field">
@@ -378,7 +378,7 @@ async function runQuery(query, pageSize, runId) {
   try {
     var params = new URLSearchParams({ query: query, pageSize: pageSize, page: '1' });
     var res = await fetch(PROXY + '/api/search?' + params);
-    if (!res.ok) { var txt = await res.text(); throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 200)); }
+    if (!res.ok) { var txt = await res.text(); throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 20)); }
     var data = await res.json();
     if (data.error) throw new Error(data.error);
     s.profiles = data.results || data.talents || data.data || [];
@@ -457,7 +457,7 @@ async function runAll() {
   var pageSize = document.getElementById('pageSize').value;
   showError('');
   if (!rawQueries) { showError('At least one query is required.'); return; }
-  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 200);
+  var queries = rawQueries.split('\n').map(function(q) { return q.trim(); }).filter(Boolean).slice(0, 20);
   if (!queries.length) { showError('No valid queries found.'); return; }
   var runId = 'run_' + Date.now();
   var box = document.getElementById('run-id-box');
@@ -469,7 +469,13 @@ async function runAll() {
   initUI(queries);
   setGlobalStatus('running');
   queries.forEach(function(q) { updateSummaryRow(q); updatePanel(q); });
-  await Promise.all(queries.map(function(q) { return runQuery(q, pageSize, runId); }));
+  // Run queries sequentially with 2s delay to avoid overwhelming the search API
+  for (var qi = 0; qi < queries.length; qi++) {
+    await runQuery(queries[qi], pageSize, runId);
+    if (qi < queries.length - 1) {
+      await new Promise(function(r) { setTimeout(r, 2000); });
+    }
+  }
   setGlobalStatus('done');
 }
 </script>
