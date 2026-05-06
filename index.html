@@ -473,7 +473,7 @@ async function runAll() {
   for (var qi = 0; qi < queries.length; qi++) {
     await runQuery(queries[qi], pageSize, runId);
     if (qi < queries.length - 1) {
-      await new Promise(function(r) { setTimeout(r, 2000); });
+      await new Promise(function(r) { setTimeout(r, 10000); });
     }
   }
   setGlobalStatus('done');
