@@ -13,22 +13,36 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Supabase not configured" });
   }
 
-  async function sbFetch(table, params) {
-    const r = await fetch(`${supabaseUrl}/rest/v1/${table}?${params}`, {
-      headers: {
-        "apikey": supabaseKey,
-        "Authorization": `Bearer ${supabaseKey}`,
-      },
-    });
-    if (!r.ok) throw new Error(`Supabase error on ${table}: ${r.status}`);
-    return r.json();
+  const headers = {
+    "apikey": supabaseKey,
+    "Authorization": `Bearer ${supabaseKey}`,
+    "Range-Unit": "items",
+  };
+
+  async function fetchAll(table, select, filter = "") {
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const range = `${from}-${from + PAGE - 1}`;
+      const url = `${supabaseUrl}/rest/v1/${table}?select=${select}${filter}&order=id.asc&limit=${PAGE}&offset=${from}`;
+      const r = await fetch(url, { headers: { ...headers, "Range": range } });
+      if (!r.ok) throw new Error(`Supabase error on ${table}: ${r.status}`);
+      const data = await r.json();
+      all = all.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+      // Safety limit - max 20k results per table
+      if (all.length >= 20000) break;
+    }
+    return all;
   }
 
   try {
     const [runs, results, reviews] = await Promise.all([
-      sbFetch("runs", "select=*&order=created_at.desc&limit=2000"),
-      sbFetch("run_results", "select=run_id,query,candidate_id,candidate_name,position,match,verdict,score,reason&order=run_id.desc,position.asc&limit=100000"),
-      sbFetch("runs", "select=query,good_fits,good_fits_borderline,total_results,human_review,human_reviewed_by,human_reviewed_at&human_review=not.is.null&order=human_reviewed_at.desc&limit=200"),
+      fetchAll("runs", "*", "&order=created_at.desc"),
+      fetchAll("run_results", "run_id,query,candidate_id,candidate_name,position,match,verdict,score,reason"),
+      fetchAll("runs", "query,good_fits,good_fits_borderline,total_results,human_review,human_reviewed_by,human_reviewed_at", "&human_review=not.is.null&order=human_reviewed_at.desc"),
     ]);
 
     return res.status(200).json({ runs, results, reviews });
