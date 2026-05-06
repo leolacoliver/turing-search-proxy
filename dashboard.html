@@ -500,26 +500,96 @@ function renderReviews(reviews) {
   el.innerHTML = html;
 }
 
-function openQueryModal(query) {
-  // Find the run for this query
-  var run = allRuns.find(function(r){ return r.query === query; });
-  if (!run) return;
+function openQueryModal(query, page) {
+  page = page || 1;
+  var PAGE_SIZE = 100;
 
-  // Get candidates for this run
-  var candidates = allResults.filter(function(r){ return String(r.run_id) === String(run.run_id); });
-  candidates.sort(function(a,b){ return (a.position||0)-(b.position||0); });
+  // Get active date filter
+  var from = document.getElementById('date-from').value;
+  var to = document.getElementById('date-to').value;
 
-  var good = candidates.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
-  var borderline = candidates.filter(function(c){ return c.verdict==='borderline'; }).length;
-  var bad = candidates.filter(function(c){ return c.verdict==='bad'||(!c.match&&c.verdict!=='borderline'); }).length;
-  var total = candidates.length;
+  // Find runs for this query that match the active date filter
+  var runs = allRuns.filter(function(r) {
+    if (r.query !== query) return false;
+    var d = (r.created_at||'').slice(0,10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+
+  // If no runs match the filter, fall back to all runs for this query
+  if (!runs.length) {
+    runs = allRuns.filter(function(r){ return r.query === query; });
+  }
+
+  if (!runs.length) { alert('No data found for this query.'); return; }
+
+  // Collect all matching run_ids
+  var runIds = {};
+  runs.forEach(function(r){ if (r.run_id) runIds[String(r.run_id)] = true; });
+
+  // Get all candidates across all matching runs
+  var allCandidates = allResults.filter(function(r){ return runIds[String(r.run_id)]; });
+
+  // Fallback by query field
+  if (!allCandidates.length) {
+    allCandidates = allResults.filter(function(r){ return r.query === query; });
+  }
+
+  // Sort by verdict (good first, then borderline, then bad), then by score desc
+  var verdictOrder = { good: 0, borderline: 1, bad: 2 };
+  allCandidates.sort(function(a,b){
+    var av = verdictOrder[a.verdict] ?? (a.match ? 0 : 2);
+    var bv = verdictOrder[b.verdict] ?? (b.match ? 0 : 2);
+    if (av !== bv) return av - bv;
+    return (b.score||0) - (a.score||0);
+  });
+
+  var totalCandidates = allCandidates.length;
+  var totalPages = Math.ceil(totalCandidates / PAGE_SIZE);
+  var candidates = allCandidates.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+  // Get human reviews for this query
+  var reviews = allReviews.filter(function(r){ return r.query === query; });
+
+
+
+  var good = allCandidates.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
+  var borderline = allCandidates.filter(function(c){ return c.verdict==='borderline'; }).length;
+  var bad = allCandidates.filter(function(c){ return c.verdict==='bad'||(c.match===false&&c.verdict!=='borderline'); }).length;
+  var total = allCandidates.length;
+  var runCount = Object.keys(runIds).length;
 
   document.getElementById('modal-title').textContent = query;
+
+  // Build reviews HTML
+  var reviewsHtml = '';
+  if (reviews.length) {
+    reviewsHtml = '<div style="margin-bottom:1rem;padding:1rem;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.2);border-radius:10px">' +
+      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Team Reviews</div>';
+    reviews.forEach(function(r) {
+      var d = r.human_reviewed_at ? new Date(r.human_reviewed_at) : null;
+      var dateStr = d ? (String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getFullYear()).slice(2)) : '—';
+      reviewsHtml += '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(37,99,235,.15)">' +
+        '<div style="font-size:11px;color:var(--blue2);margin-bottom:4px;font-weight:600">' +
+          (r.human_reviewed_by||'anonymous') + ' · ' + dateStr +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap">' + (r.human_review||'') + '</div>' +
+      '</div>';
+    });
+    reviewsHtml += '</div>';
+  }
+
   document.getElementById('modal-stats').innerHTML =
     '<div class="modal-stat"><strong style="color:#34d399">' + good + '</strong>Good fits</div>' +
     '<div class="modal-stat"><strong style="color:#fbbf24">' + borderline + '</strong>Borderline</div>' +
     '<div class="modal-stat"><strong style="color:#f87171">' + bad + '</strong>Not a fit</div>' +
-    '<div class="modal-stat"><strong>' + total + '</strong>Total evaluated</div>';
+    '<div class="modal-stat"><strong>' + total + '</strong>Total candidates</div>' +
+    '<div class="modal-stat"><strong>' + runCount + '</strong>Run' + (runCount>1?'s':'') + '</div>';
+
+  // Insert reviews above candidates
+  var reviewsEl = document.getElementById('modal-reviews');
+  if (reviewsEl) reviewsEl.innerHTML = reviewsHtml;
 
   var html = '';
   // Show good first, then borderline, then bad
@@ -548,6 +618,16 @@ function openQueryModal(query) {
   });
 
   if (!html) html = '<p style="color:var(--text2);font-size:13px">No candidate details available. Run the query in Search Tester first.</p>';
+
+  // Add pagination
+  if (totalPages > 1) {
+    html += '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">';
+    html += '<span style="font-size:12px;color:var(--text2)">Page ' + page + ' of ' + totalPages + ' (' + totalCandidates + ' candidates)</span>';
+    if (page > 1) html += '<button onclick="openQueryModal(' + JSON.stringify(query) + ',' + (page-1) + ')" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:12px">← Prev</button>';
+    if (page < totalPages) html += '<button onclick="openQueryModal(' + JSON.stringify(query) + ',' + (page+1) + ')" style="padding:5px 12px;background:var(--blue);border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:12px">Next →</button>';
+    html += '</div>';
+  }
+
   document.getElementById('modal-candidates').innerHTML = html;
   document.getElementById('modal-overlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -665,6 +745,7 @@ window.addEventListener('load', async function() {
     </div>
     <div class="modal-body">
       <div class="modal-stats" id="modal-stats"></div>
+      <div id="modal-reviews"></div>
       <div id="modal-candidates"></div>
     </div>
   </div>
