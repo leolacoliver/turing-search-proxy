@@ -84,7 +84,7 @@ tr:last-child td{border-bottom:none;}
 .modal-stat strong{color:var(--text);font-size:14px;display:block;}
 .candidate-row{border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;margin-bottom:6px;display:flex;align-items:flex-start;gap:.75rem;}
 .candidate-row.good{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.03);}
-.candidate-row.borderline{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.03);}
+.candidate-row.acceptable{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.03);}
 .candidate-row.bad{border-color:rgba(239,68,68,.15);background:rgba(239,68,68,.02);}
 .cand-num{font-size:11px;color:var(--text3);min-width:24px;padding-top:2px;}
 .cand-info{flex:1;min-width:0;}
@@ -113,7 +113,7 @@ tr:last-child td{border-bottom:none;}
 
 <div class="page">
   <div class="page-title">Search Analytics</div>
-  <div class="page-sub">LLM evaluation results — good fits, borderline, and team reviews</div>
+  <div class="page-sub">LLM evaluation results — good fits, acceptable, and team reviews</div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:8px;">
       <label style="font-size:12px;color:var(--text2);">From date</label>
@@ -137,7 +137,7 @@ tr:last-child td{border-bottom:none;}
       <div class="card"><div class="kpi-label">Total Runs</div><div class="kpi-value kpi-accent" id="kpi-runs">-</div><div class="kpi-sub">queries executed</div></div>
       <div class="card"><div class="kpi-label">Profiles Evaluated</div><div class="kpi-value" id="kpi-profiles">-</div><div class="kpi-sub">total candidates</div></div>
       <div class="card"><div class="kpi-label">Good Match Rate</div><div class="kpi-value" style="color:#34d399" id="kpi-good">-</div><div class="kpi-sub">score ≥ 80</div></div>
-      <div class="card"><div class="kpi-label">Good + Borderline</div><div class="kpi-value" style="color:#fbbf24" id="kpi-combined">-</div><div class="kpi-sub">score ≥ 60</div></div>
+      <div class="card"><div class="kpi-label">Good + Acceptable</div><div class="kpi-value" style="color:#fbbf24" id="kpi-combined">-</div><div class="kpi-sub">score ≥ 60</div></div>
       <div class="card"><div class="kpi-label">Team Reviews</div><div class="kpi-value" style="color:var(--blue2)" id="kpi-reviews">-</div><div class="kpi-sub">human feedback entries</div></div>
     </div>
 
@@ -145,10 +145,10 @@ tr:last-child td{border-bottom:none;}
       <!-- Domain table -->
       <div class="card">
         <div class="card-title">Match rate by domain</div>
-        <!-- Toggle good vs good+borderline -->
+        <!-- Toggle good vs good+acceptable -->
         <div class="toggle-row">
           <button class="toggle-btn active" id="toggle-good" onclick="setDomainMode('good')">Good only (≥80%)</button>
-          <button class="toggle-btn" id="toggle-combined" onclick="setDomainMode('combined')">Good + Borderline (≥60%)</button>
+          <button class="toggle-btn" id="toggle-combined" onclick="setDomainMode('combined')">Good + Acceptable (≥60%)</button>
         </div>
         <div id="domain-table"></div>
       </div>
@@ -165,12 +165,12 @@ tr:last-child td{border-bottom:none;}
       <!-- Toggle for chart too -->
       <div class="toggle-row">
         <button class="toggle-btn active" id="chart-toggle-good" onclick="setChartMode('good')">Good only</button>
-        <button class="toggle-btn" id="chart-toggle-combined" onclick="setChartMode('combined')">Good + Borderline</button>
+        <button class="toggle-btn" id="chart-toggle-combined" onclick="setChartMode('combined')">Good + Acceptable</button>
       </div>
       <div class="chart-wrap"><canvas id="chart"></canvas></div>
       <div class="section-label" style="margin-top:1.25rem">Daily breakdown — click to expand</div>
       <table>
-        <thead><tr><th>Date</th><th>Runs</th><th>Evaluated</th><th>Good</th><th>+ Borderline</th><th>Good rate</th><th>Combined rate</th><th>Progress</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Runs</th><th>Evaluated</th><th>Good</th><th>+ Acceptable</th><th>Good rate</th><th>Combined rate</th><th>Progress</th><th></th></tr></thead>
         <tbody id="daily-tbody"></tbody>
       </table>
     </div>
@@ -199,10 +199,10 @@ function barHtml(pct) {
   return '<div class="bar-wrap"><div class="bar ' + cls + '" style="width:' + Math.min(pct,100) + '%"></div></div>';
 }
 
-function stackHtml(goodPct, borderlinePct) {
+function stackHtml(goodPct, acceptablePct) {
   return '<div class="stack-wrap">' +
     '<div class="stack-green" style="width:' + Math.min(goodPct,100) + '%"></div>' +
-    '<div class="stack-yellow" style="width:' + Math.min(borderlinePct,100) + '%"></div>' +
+    '<div class="stack-yellow" style="width:' + Math.min(acceptablePct,100) + '%"></div>' +
   '</div>';
 }
 
@@ -242,9 +242,9 @@ function setChartMode(mode) {
 function renderKPIs(runs, results, reviews) {
   var total = runs.reduce(function(a,r){return a+(r.total_results||0);},0);
   var goodFits = runs.reduce(function(a,r){return a+(r.good_fits||0);},0);
-  var borderlineFits = runs.reduce(function(a,r){return a+(r.good_fits_borderline||0);},0);
+  var acceptableFits = runs.reduce(function(a,r){return a+(r.good_fits_acceptable||0);},0);
   var goodRate = total > 0 ? Math.round(goodFits/total*100) : 0;
-  var combinedRate = total > 0 ? Math.round((goodFits+borderlineFits)/total*100) : 0;
+  var combinedRate = total > 0 ? Math.round((goodFits+acceptableFits)/total*100) : 0;
   document.getElementById('kpi-runs').textContent = runs.length;
   document.getElementById('kpi-profiles').textContent = total.toLocaleString();
   document.getElementById('kpi-good').textContent = goodRate + '%';
@@ -258,14 +258,14 @@ function renderDomainTable(runs) {
     var d = r.query_domain || 'Unknown';
     var sd = r.query_subdomain || 'Unknown';
     var q = r.query || '';
-    if (!domains[d]) domains[d] = { good:0, borderline:0, total:0, subs:{} };
+    if (!domains[d]) domains[d] = { good:0, acceptable:0, total:0, subs:{} };
     domains[d].total += r.total_results||0;
     domains[d].good  += r.good_fits||0;
-    domains[d].borderline += r.good_fits_borderline||0;
-    if (!domains[d].subs[sd]) domains[d].subs[sd] = { good:0, borderline:0, total:0, queries:{} };
+    domains[d].acceptable += r.good_fits_acceptable||0;
+    if (!domains[d].subs[sd]) domains[d].subs[sd] = { good:0, acceptable:0, total:0, queries:{} };
     domains[d].subs[sd].total += r.total_results||0;
     domains[d].subs[sd].good  += r.good_fits||0;
-    domains[d].subs[sd].borderline += r.good_fits_borderline||0;
+    domains[d].subs[sd].acceptable += r.good_fits_acceptable||0;
     if (q) domains[d].subs[sd].queries[q] = true;
   });
 
@@ -274,7 +274,7 @@ function renderDomainTable(runs) {
 
   Object.keys(domains).sort().forEach(function(d) {
     var dd = domains[d];
-    var fits = useGood ? dd.good : dd.good + dd.borderline;
+    var fits = useGood ? dd.good : dd.good + dd.acceptable;
     var pct = dd.total > 0 ? Math.round(fits/dd.total*100) : 0;
     var did = 'dom_' + safeId(d);
     html += '<tr class="clickable" onclick="toggleRows(\'' + did + '\')">' +
@@ -282,12 +282,12 @@ function renderDomainTable(runs) {
       '<td>' + dd.total.toLocaleString() + '</td>' +
       '<td>' + fits.toLocaleString() + '</td>' +
       '<td>' + badge(pct) + '</td>' +
-      '<td>' + (useGood ? barHtml(pct) : stackHtml(dd.total>0?Math.round(dd.good/dd.total*100):0, dd.total>0?Math.round(dd.borderline/dd.total*100):0)) + '</td>' +
+      '<td>' + (useGood ? barHtml(pct) : stackHtml(dd.total>0?Math.round(dd.good/dd.total*100):0, dd.total>0?Math.round(dd.acceptable/dd.total*100):0)) + '</td>' +
       '<td><button class="expand-btn">+</button></td></tr>';
 
     Object.keys(dd.subs).sort().forEach(function(sd) {
       var s = dd.subs[sd];
-      var sFits = useGood ? s.good : s.good + s.borderline;
+      var sFits = useGood ? s.good : s.good + s.acceptable;
       var sp = s.total > 0 ? Math.round(sFits/s.total*100) : 0;
       var sid2 = did + '_' + safeId(sd);
       var queryTags = Object.keys(s.queries).map(function(q){
@@ -315,66 +315,66 @@ function renderDailyTable(runs) {
   runs.forEach(function(r) {
     var day = (r.created_at||'').slice(0,10);
     if (!day) return;
-    if (!days[day]) days[day] = { count:0, total:0, good:0, borderline:0, domains:{} };
+    if (!days[day]) days[day] = { count:0, total:0, good:0, acceptable:0, domains:{} };
     days[day].count++;
     days[day].total += r.total_results||0;
     days[day].good  += r.good_fits||0;
-    days[day].borderline += r.good_fits_borderline||0;
+    days[day].acceptable += r.good_fits_acceptable||0;
     var d = r.query_domain||'Unknown';
     var sd = r.query_subdomain||'Unknown';
-    if (!days[day].domains[d]) days[day].domains[d] = { total:0, good:0, borderline:0, subs:{} };
+    if (!days[day].domains[d]) days[day].domains[d] = { total:0, good:0, acceptable:0, subs:{} };
     days[day].domains[d].total += r.total_results||0;
     days[day].domains[d].good  += r.good_fits||0;
-    days[day].domains[d].borderline += r.good_fits_borderline||0;
-    if (!days[day].domains[d].subs[sd]) days[day].domains[d].subs[sd] = { total:0, good:0, borderline:0 };
+    days[day].domains[d].acceptable += r.good_fits_acceptable||0;
+    if (!days[day].domains[d].subs[sd]) days[day].domains[d].subs[sd] = { total:0, good:0, acceptable:0 };
     days[day].domains[d].subs[sd].total += r.total_results||0;
     days[day].domains[d].subs[sd].good  += r.good_fits||0;
-    days[day].domains[d].subs[sd].borderline += r.good_fits_borderline||0;
+    days[day].domains[d].subs[sd].acceptable += r.good_fits_acceptable||0;
   });
 
   var rows = '';
   Object.keys(days).sort().reverse().forEach(function(day) {
     var dd = days[day];
     var goodPct = dd.total > 0 ? Math.round(dd.good/dd.total*100) : 0;
-    var combinedPct = dd.total > 0 ? Math.round((dd.good+dd.borderline)/dd.total*100) : 0;
+    var combinedPct = dd.total > 0 ? Math.round((dd.good+dd.acceptable)/dd.total*100) : 0;
     var dayId = 'day_' + safeId(day);
     rows += '<tr class="clickable" onclick="toggleRows(\'' + dayId + '\')">' +
       '<td><strong>' + day + '</strong></td><td>' + dd.count + '</td>' +
       '<td>' + dd.total.toLocaleString() + '</td>' +
       '<td style="color:#34d399">' + dd.good + '</td>' +
-      '<td style="color:#fbbf24">+' + dd.borderline + '</td>' +
+      '<td style="color:#fbbf24">+' + dd.acceptable + '</td>' +
       '<td>' + badge(goodPct) + '</td>' +
       '<td><span class="badge yellow">' + combinedPct + '%</span></td>' +
-      '<td style="min-width:100px">' + stackHtml(goodPct, dd.total>0?Math.round(dd.borderline/dd.total*100):0) + '</td>' +
+      '<td style="min-width:100px">' + stackHtml(goodPct, dd.total>0?Math.round(dd.acceptable/dd.total*100):0) + '</td>' +
       '<td><button class="expand-btn">+</button></td></tr>';
 
     Object.keys(dd.domains).sort().forEach(function(d) {
       var dom = dd.domains[d];
       var dp = dom.total > 0 ? Math.round(dom.good/dom.total*100) : 0;
-      var dc = dom.total > 0 ? Math.round((dom.good+dom.borderline)/dom.total*100) : 0;
+      var dc = dom.total > 0 ? Math.round((dom.good+dom.acceptable)/dom.total*100) : 0;
       var domId = dayId + '_' + safeId(d);
       rows += '<tr class="sub-row" data-parent="' + dayId + '" data-id="' + domId + '" style="display:none">' +
         '<td style="padding-left:16px;font-weight:500">' + d + '</td><td>-</td>' +
         '<td>' + dom.total + '</td>' +
         '<td style="color:#34d399">' + dom.good + '</td>' +
-        '<td style="color:#fbbf24">+' + dom.borderline + '</td>' +
+        '<td style="color:#fbbf24">+' + dom.acceptable + '</td>' +
         '<td>' + badge(dp) + '</td>' +
         '<td><span class="badge yellow">' + dc + '%</span></td>' +
-        '<td>' + stackHtml(dp, dom.total>0?Math.round(dom.borderline/dom.total*100):0) + '</td>' +
+        '<td>' + stackHtml(dp, dom.total>0?Math.round(dom.acceptable/dom.total*100):0) + '</td>' +
         '<td><button class="expand-btn" onclick="event.stopPropagation();toggleRows(\'' + domId + '\')">+</button></td></tr>';
 
       Object.keys(dom.subs).sort().forEach(function(sd) {
         var sub = dom.subs[sd];
         var sp = sub.total > 0 ? Math.round(sub.good/sub.total*100) : 0;
-        var sc = sub.total > 0 ? Math.round((sub.good+sub.borderline)/sub.total*100) : 0;
+        var sc = sub.total > 0 ? Math.round((sub.good+sub.acceptable)/sub.total*100) : 0;
         rows += '<tr class="sub-sub-row" data-parent="' + domId + '" style="display:none">' +
           '<td style="padding-left:30px">' + sd + '</td><td>-</td>' +
           '<td>' + sub.total + '</td>' +
           '<td style="color:#34d399">' + sub.good + '</td>' +
-          '<td style="color:#fbbf24">+' + sub.borderline + '</td>' +
+          '<td style="color:#fbbf24">+' + sub.acceptable + '</td>' +
           '<td>' + badge(sp) + '</td>' +
           '<td><span class="badge yellow">' + sc + '%</span></td>' +
-          '<td>' + stackHtml(sp, sub.total>0?Math.round(sub.borderline/sub.total*100):0) + '</td>' +
+          '<td>' + stackHtml(sp, sub.total>0?Math.round(sub.acceptable/sub.total*100):0) + '</td>' +
           '<td></td></tr>';
       });
     });
@@ -387,21 +387,21 @@ function renderChart(runs) {
   runs.forEach(function(r) {
     var day = (r.created_at||'').slice(0,10);
     if (!day) return;
-    if (!days[day]) days[day] = { total:0, good:0, borderline:0 };
+    if (!days[day]) days[day] = { total:0, good:0, acceptable:0 };
     days[day].total += r.total_results||0;
     days[day].good  += r.good_fits||0;
-    days[day].borderline += r.good_fits_borderline||0;
+    days[day].acceptable += r.good_fits_acceptable||0;
   });
   var labels = Object.keys(days).sort();
   var goodData = labels.map(function(d){ return days[d].total>0?Math.round(days[d].good/days[d].total*100):0; });
-  var combinedData = labels.map(function(d){ return days[d].total>0?Math.round((days[d].good+days[d].borderline)/days[d].total*100):0; });
+  var combinedData = labels.map(function(d){ return days[d].total>0?Math.round((days[d].good+days[d].acceptable)/days[d].total*100):0; });
 
   if (chartInstance) chartInstance.destroy();
   var datasets = chartMode === 'good' ? [
     { label:'Good match %', data:goodData, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', tension:0.4, fill:true, pointRadius:4, pointBackgroundColor:'#10b981', pointBorderColor:'#fff', pointBorderWidth:2 }
   ] : [
     { label:'Good %', data:goodData, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.08)', tension:0.4, fill:true, pointRadius:4, pointBackgroundColor:'#10b981', pointBorderColor:'#fff', pointBorderWidth:2 },
-    { label:'Good+Borderline %', data:combinedData, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.06)', tension:0.4, fill:true, pointRadius:4, pointBackgroundColor:'#f59e0b', pointBorderColor:'#fff', pointBorderWidth:2 }
+    { label:'Good+Acceptable %', data:combinedData, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.06)', tension:0.4, fill:true, pointRadius:4, pointBackgroundColor:'#f59e0b', pointBorderColor:'#fff', pointBorderWidth:2 }
   ];
 
   chartInstance = new Chart(document.getElementById('chart').getContext('2d'), {
@@ -482,7 +482,7 @@ function renderReviews(reviews) {
       date = dd+'/'+mm+'/'+yy+' '+hh+':'+min;
     }
     var goodRate = r.total_results > 0 ? Math.round((r.good_fits||0)/r.total_results*100) : 0;
-    var combinedRate = r.total_results > 0 ? Math.round(((r.good_fits||0)+(r.good_fits_borderline||0))/r.total_results*100) : 0;
+    var combinedRate = r.total_results > 0 ? Math.round(((r.good_fits||0)+(r.good_fits_acceptable||0))/r.total_results*100) : 0;
     html += '<div class="review-card">' +
       '<div class="review-query">' + r.query +
         '<span class="reviewer-badge">' + (r.human_reviewed_by||'anonymous') + '</span>' +
@@ -490,7 +490,7 @@ function renderReviews(reviews) {
       '<div class="review-meta">' +
         date + ' &nbsp;·&nbsp; ' +
         '<span style="color:#34d399">' + (r.good_fits||0) + ' good</span>' +
-        ' <span style="color:#fbbf24">+' + (r.good_fits_borderline||0) + ' borderline</span>' +
+        ' <span style="color:#fbbf24">+' + (r.good_fits_acceptable||0) + ' acceptable</span>' +
         ' / ' + (r.total_results||0) + ' total' +
         ' &nbsp;·&nbsp; ' + goodRate + '% good &nbsp; ' + combinedRate + '% combined' +
       '</div>' +
@@ -536,28 +536,39 @@ function openQueryModal(query, page) {
     allCandidates = allResults.filter(function(r){ return r.query === query; });
   }
 
-  // Sort by verdict (good first, then borderline, then bad), then by score desc
-  var verdictOrder = { good: 0, borderline: 1, bad: 2 };
-  allCandidates.sort(function(a,b){
-    var av = verdictOrder[a.verdict] ?? (a.match ? 0 : 2);
-    var bv = verdictOrder[b.verdict] ?? (b.match ? 0 : 2);
+  // Deduplicate: if same candidate appears in multiple runs, keep highest score
+  var seen = {};
+  var deduped = [];
+  allCandidates.forEach(function(c) {
+    var key = c.candidate_id ? String(c.candidate_id) : (c.candidate_name + '_' + String(c.run_id));
+    if (!seen[key] || (c.score||0) > (seen[key].score||0)) {
+      seen[key] = c;
+    }
+  });
+  Object.keys(seen).forEach(function(k){ deduped.push(seen[k]); });
+
+  // Sort by verdict (good first, then acceptable, then bad), then by score desc
+  var verdictOrder = { good: 0, acceptable: 1, bad: 2 };
+  deduped.sort(function(a,b){
+    var av = verdictOrder[a.verdict] !== undefined ? verdictOrder[a.verdict] : (a.match ? 0 : 2);
+    var bv = verdictOrder[b.verdict] !== undefined ? verdictOrder[b.verdict] : (b.match ? 0 : 2);
     if (av !== bv) return av - bv;
     return (b.score||0) - (a.score||0);
   });
 
-  var totalCandidates = allCandidates.length;
+  var totalCandidates = deduped.length;
   var totalPages = Math.ceil(totalCandidates / PAGE_SIZE);
-  var candidates = allCandidates.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+  var candidates = deduped.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
 
   // Get human reviews for this query
   var reviews = allReviews.filter(function(r){ return r.query === query; });
 
 
 
-  var good = allCandidates.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
-  var borderline = allCandidates.filter(function(c){ return c.verdict==='borderline'; }).length;
-  var bad = allCandidates.filter(function(c){ return c.verdict==='bad'||(c.match===false&&c.verdict!=='borderline'); }).length;
-  var total = allCandidates.length;
+  var good = deduped.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
+  var acceptable = deduped.filter(function(c){ return c.verdict==='acceptable'; }).length;
+  var bad = deduped.filter(function(c){ return c.verdict==='bad'||(c.match===false&&c.verdict!=='acceptable'); }).length;
+  var total = deduped.length;
   var runCount = Object.keys(runIds).length;
 
   document.getElementById('modal-title').textContent = query;
@@ -582,7 +593,7 @@ function openQueryModal(query, page) {
 
   document.getElementById('modal-stats').innerHTML =
     '<div class="modal-stat"><strong style="color:#34d399">' + good + '</strong>Good fits</div>' +
-    '<div class="modal-stat"><strong style="color:#fbbf24">' + borderline + '</strong>Borderline</div>' +
+    '<div class="modal-stat"><strong style="color:#fbbf24">' + acceptable + '</strong>Acceptable</div>' +
     '<div class="modal-stat"><strong style="color:#f87171">' + bad + '</strong>Not a fit</div>' +
     '<div class="modal-stat"><strong>' + total + '</strong>Total candidates</div>' +
     '<div class="modal-stat"><strong>' + runCount + '</strong>Run' + (runCount>1?'s':'') + '</div>';
@@ -592,18 +603,18 @@ function openQueryModal(query, page) {
   if (reviewsEl) reviewsEl.innerHTML = reviewsHtml;
 
   var html = '';
-  // Show good first, then borderline, then bad
+  // Show good first, then acceptable, then bad
   var sorted = candidates.slice().sort(function(a,b){
-    var order = {good:0, borderline:1, bad:2};
+    var order = {good:0, acceptable:1, bad:2};
     var av = order[a.verdict] ?? (a.match ? 0 : 2);
     var bv = order[b.verdict] ?? (b.match ? 0 : 2);
     return av - bv;
   });
 
-  sorted.forEach(function(c) {
+  candidates.forEach(function(c) {
     var v = c.verdict || (c.match ? 'good' : 'bad');
     var vLabel = v === 'good' ? '<span class="badge green">good fit</span>' :
-                 v === 'borderline' ? '<span class="badge yellow">borderline</span>' :
+                 v === 'acceptable' ? '<span class="badge yellow">acceptable</span>' :
                  '<span class="badge red">not a fit</span>';
     var profileLink = c.candidate_id ?
       '<a href="https://matching.turing.com/developer/' + c.candidate_id + '" target="_blank" class="cand-link">profile ↗</a>' : '';
