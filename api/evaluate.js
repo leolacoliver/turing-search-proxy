@@ -242,7 +242,7 @@ ${text}`;
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-5.2",
+        model: "gpt-5.4",
         messages: [{ role: "user", content: prompt }],
         max_completion_tokens: 8000,
         temperature: 0,
