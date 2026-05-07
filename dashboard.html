@@ -242,7 +242,7 @@ function setChartMode(mode) {
 function renderKPIs(runs, results, reviews) {
   var total = runs.reduce(function(a,r){return a+(r.total_results||0);},0);
   var goodFits = runs.reduce(function(a,r){return a+(r.good_fits||0);},0);
-  var acceptableFits = runs.reduce(function(a,r){return a+(r.good_fits_acceptable||0);},0);
+  var acceptableFits = runs.reduce(function(a,r){return a+(r.good_fits_borderline||0);},0);
   var goodRate = total > 0 ? Math.round(goodFits/total*100) : 0;
   var combinedRate = total > 0 ? Math.round((goodFits+acceptableFits)/total*100) : 0;
   document.getElementById('kpi-runs').textContent = runs.length;
@@ -261,11 +261,11 @@ function renderDomainTable(runs) {
     if (!domains[d]) domains[d] = { good:0, acceptable:0, total:0, subs:{} };
     domains[d].total += r.total_results||0;
     domains[d].good  += r.good_fits||0;
-    domains[d].acceptable += r.good_fits_acceptable||0;
+    domains[d].acceptable += r.good_fits_borderline||0;
     if (!domains[d].subs[sd]) domains[d].subs[sd] = { good:0, acceptable:0, total:0, queries:{} };
     domains[d].subs[sd].total += r.total_results||0;
     domains[d].subs[sd].good  += r.good_fits||0;
-    domains[d].subs[sd].acceptable += r.good_fits_acceptable||0;
+    domains[d].subs[sd].acceptable += r.good_fits_borderline||0;
     if (q) domains[d].subs[sd].queries[q] = true;
   });
 
@@ -319,17 +319,17 @@ function renderDailyTable(runs) {
     days[day].count++;
     days[day].total += r.total_results||0;
     days[day].good  += r.good_fits||0;
-    days[day].acceptable += r.good_fits_acceptable||0;
+    days[day].acceptable += r.good_fits_borderline||0;
     var d = r.query_domain||'Unknown';
     var sd = r.query_subdomain||'Unknown';
     if (!days[day].domains[d]) days[day].domains[d] = { total:0, good:0, acceptable:0, subs:{} };
     days[day].domains[d].total += r.total_results||0;
     days[day].domains[d].good  += r.good_fits||0;
-    days[day].domains[d].acceptable += r.good_fits_acceptable||0;
+    days[day].domains[d].acceptable += r.good_fits_borderline||0;
     if (!days[day].domains[d].subs[sd]) days[day].domains[d].subs[sd] = { total:0, good:0, acceptable:0 };
     days[day].domains[d].subs[sd].total += r.total_results||0;
     days[day].domains[d].subs[sd].good  += r.good_fits||0;
-    days[day].domains[d].subs[sd].acceptable += r.good_fits_acceptable||0;
+    days[day].domains[d].subs[sd].acceptable += r.good_fits_borderline||0;
   });
 
   var rows = '';
@@ -390,7 +390,7 @@ function renderChart(runs) {
     if (!days[day]) days[day] = { total:0, good:0, acceptable:0 };
     days[day].total += r.total_results||0;
     days[day].good  += r.good_fits||0;
-    days[day].acceptable += r.good_fits_acceptable||0;
+    days[day].acceptable += r.good_fits_borderline||0;
   });
   var labels = Object.keys(days).sort();
   var goodData = labels.map(function(d){ return days[d].total>0?Math.round(days[d].good/days[d].total*100):0; });
@@ -482,7 +482,7 @@ function renderReviews(reviews) {
       date = dd+'/'+mm+'/'+yy+' '+hh+':'+min;
     }
     var goodRate = r.total_results > 0 ? Math.round((r.good_fits||0)/r.total_results*100) : 0;
-    var combinedRate = r.total_results > 0 ? Math.round(((r.good_fits||0)+(r.good_fits_acceptable||0))/r.total_results*100) : 0;
+    var combinedRate = r.total_results > 0 ? Math.round(((r.good_fits||0)+(r.good_fits_borderline||0))/r.total_results*100) : 0;
     html += '<div class="review-card">' +
       '<div class="review-query">' + r.query +
         '<span class="reviewer-badge">' + (r.human_reviewed_by||'anonymous') + '</span>' +
@@ -490,7 +490,7 @@ function renderReviews(reviews) {
       '<div class="review-meta">' +
         date + ' &nbsp;·&nbsp; ' +
         '<span style="color:#34d399">' + (r.good_fits||0) + ' good</span>' +
-        ' <span style="color:#fbbf24">+' + (r.good_fits_acceptable||0) + ' acceptable</span>' +
+        ' <span style="color:#fbbf24">+' + (r.good_fits_borderline||0) + ' acceptable</span>' +
         ' / ' + (r.total_results||0) + ' total' +
         ' &nbsp;·&nbsp; ' + goodRate + '% good &nbsp; ' + combinedRate + '% combined' +
       '</div>' +
@@ -548,7 +548,7 @@ function openQueryModal(query, page) {
   Object.keys(seen).forEach(function(k){ deduped.push(seen[k]); });
 
   // Sort by verdict (good first, then acceptable, then bad), then by score desc
-  var verdictOrder = { good: 0, acceptable: 1, bad: 2 };
+  var verdictOrder = { good: 0, borderline: 1, bad: 2 };
   deduped.sort(function(a,b){
     var av = verdictOrder[a.verdict] !== undefined ? verdictOrder[a.verdict] : (a.match ? 0 : 2);
     var bv = verdictOrder[b.verdict] !== undefined ? verdictOrder[b.verdict] : (b.match ? 0 : 2);
@@ -566,8 +566,8 @@ function openQueryModal(query, page) {
 
 
   var good = deduped.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
-  var acceptable = deduped.filter(function(c){ return c.verdict==='acceptable'; }).length;
-  var bad = deduped.filter(function(c){ return c.verdict==='bad'||(c.match===false&&c.verdict!=='acceptable'); }).length;
+  var acceptable = deduped.filter(function(c){ return c.verdict==='borderline'; }).length;
+  var bad = deduped.filter(function(c){ return c.verdict==='bad'||(c.match===false&&c.verdict!=='borderline'); }).length;
   var total = deduped.length;
   var runCount = Object.keys(runIds).length;
 
@@ -605,20 +605,20 @@ function openQueryModal(query, page) {
   var html = '';
   // Show good first, then acceptable, then bad
   var sorted = candidates.slice().sort(function(a,b){
-    var order = {good:0, acceptable:1, bad:2};
+    var order = {good:0, borderline:1, bad:2};
     var av = order[a.verdict] ?? (a.match ? 0 : 2);
     var bv = order[b.verdict] ?? (b.match ? 0 : 2);
     return av - bv;
   });
 
   candidates.forEach(function(c) {
-    var v = c.verdict || (c.match ? 'good' : 'bad');
+    var v = c.verdict || (c.match ? 'good' : 'bad'); var vDisplay = v === 'borderline' ? 'acceptable' : v;
     var vLabel = v === 'good' ? '<span class="badge green">good fit</span>' :
-                 v === 'acceptable' ? '<span class="badge yellow">acceptable</span>' :
+                 v === 'borderline' ? '<span class="badge yellow">acceptable</span>' :
                  '<span class="badge red">not a fit</span>';
     var profileLink = c.candidate_id ?
       '<a href="https://matching.turing.com/developer/' + c.candidate_id + '" target="_blank" class="cand-link">profile ↗</a>' : '';
-    html += '<div class="candidate-row ' + v + '">' +
+    html += '<div class="candidate-row ' + vDisplay + '">' +
       '<div class="cand-num">' + (c.position||'') + '</div>' +
       '<div class="cand-info">' +
         '<div class="cand-name">' + (c.candidate_name||'Unknown') + ' ' + profileLink + ' ' + vLabel + '</div>' +
