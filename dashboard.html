@@ -296,7 +296,14 @@ function renderDomainTable(runs) {
       var sid2 = did + '_' + safeId(sd);
       var queryTags = Object.keys(s.queries).map(function(q){
         var escaped = q.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-        return '<span class="query-tag" data-query="' + escaped + '">' + escaped + ' ↗</span>';
+        // Find the most recent run for this query within current filter
+        var qRuns = currentFilteredRuns.filter(function(r){ return r.query === q; });
+        if (!qRuns.length) qRuns = allRuns.filter(function(r){ return r.query === q; });
+        qRuns.sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
+        var runId = qRuns.length ? qRuns[0].run_id : '';
+        var dateStr = qRuns.length ? (qRuns[0].created_at||'').slice(0,10) : '';
+        var url = '/candidates.html?run_id=' + encodeURIComponent(runId) + '&query=' + encodeURIComponent(q) + '&date=' + encodeURIComponent(dateStr);
+        return '<a class="query-tag" href="' + url + '" target="_blank">' + escaped + ' ↗</a>';
       }).join('');
       html += '<tr class="sub-row" data-parent="' + did + '" data-id="' + sid2 + '" style="display:none">' +
         '<td style="padding-left:18px">' + sd + '</td>' +
