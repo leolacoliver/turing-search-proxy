@@ -528,8 +528,10 @@ function openQueryModal(query, page) {
 
   if (!runs.length) { alert('No data found for this query.'); return; }
 
-  // Collect run_ids
-  var runIds = runs.map(function(r){ return r.run_id; }).filter(Boolean);
+  // Use only the most recent run — avoid mixing candidates from multiple runs
+  runs.sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
+  var latestRun = runs[0];
+  var runIds = [latestRun.run_id].filter(Boolean);
 
   // Show modal immediately with loading state
   document.getElementById('modal-title').textContent = query;
