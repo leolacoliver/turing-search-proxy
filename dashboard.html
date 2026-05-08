@@ -193,6 +193,7 @@ var allResults = [];
 var allReviews = [];
 var domainMode = 'good';
 var chartMode = 'good';
+var dataReady = false;
 
 function barHtml(pct) {
   var cls = pct >= 60 ? 'green' : pct >= 30 ? 'yellow' : 'red';
@@ -661,6 +662,7 @@ document.addEventListener('click', function(e) {
 });
 
 function applyFilter() {
+  if (!dataReady) return;
   var from = document.getElementById('date-from').value;
   var to = document.getElementById('date-to').value;
 
@@ -720,22 +722,33 @@ function formatDate(iso) {
 
 window.addEventListener('load', async function() {
   try {
+    var loadingEl = document.getElementById('loading');
+    loadingEl.textContent = 'Loading dashboard data...';
+
     var res = await fetch('/api/dashboard');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var data = await res.json();
     if (data.error) throw new Error(data.error);
 
+    // Wait for ALL data to be assigned before rendering anything
     allRuns = data.runs || [];
     allResults = data.results || [];
     allReviews = data.reviews || [];
+
+    loadingEl.textContent = 'Loaded ' + allRuns.length + ' runs, ' + allResults.length + ' results. Rendering...';
 
     // Default from-date to today
     var today = new Date().toISOString().slice(0,10);
     document.getElementById('date-from').value = today;
 
+    // Small timeout to let browser breathe before heavy render
+    await new Promise(function(r){ setTimeout(r, 50); });
+
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = '';
 
+    // Render everything in one go after all data is loaded
+    dataReady = true;
     applyFilter();
     renderReviews(allReviews);
   } catch(e) {
