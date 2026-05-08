@@ -194,6 +194,9 @@ var allReviews = [];
 var domainMode = 'good';
 var chartMode = 'good';
 var dataReady = false;
+var currentFilteredRuns = [];
+var currentFilteredResults = [];
+var currentFilteredReviews = [];
 
 function barHtml(pct) {
   var cls = pct >= 60 ? 'green' : pct >= 30 ? 'yellow' : 'red';
@@ -230,14 +233,14 @@ function setDomainMode(mode) {
   domainMode = mode;
   document.getElementById('toggle-good').className = 'toggle-btn' + (mode === 'good' ? ' active' : '');
   document.getElementById('toggle-combined').className = 'toggle-btn' + (mode === 'combined' ? ' active' : '');
-  renderDomainTable(allRuns);
+  renderDomainTable(currentFilteredRuns.length ? currentFilteredRuns : allRuns);
 }
 
 function setChartMode(mode) {
   chartMode = mode;
   document.getElementById('chart-toggle-good').className = 'toggle-btn' + (mode === 'good' ? ' active' : '');
   document.getElementById('chart-toggle-combined').className = 'toggle-btn' + (mode === 'combined' ? ' active' : '');
-  renderChart(allRuns);
+  renderChart(currentFilteredRuns.length ? currentFilteredRuns : allRuns);
 }
 
 function renderKPIs(runs, results, reviews) {
@@ -693,6 +696,11 @@ function applyFilter() {
   else if (from) label = 'Showing from ' + formatDate(from);
   else if (to) label = 'Showing up to ' + formatDate(to);
   document.getElementById('filter-label').textContent = label;
+
+  // Store filtered state for use by mode toggles
+  currentFilteredRuns = filteredRuns;
+  currentFilteredResults = filteredResults;
+  currentFilteredReviews = filteredReviews;
 
   renderKPIs(filteredRuns, filteredResults, filteredReviews);
   renderDomainTable(filteredRuns);
