@@ -512,7 +512,7 @@ function openQueryModal(query, page) {
   var from = document.getElementById('date-from').value;
   var to = document.getElementById('date-to').value;
 
-  // Find runs for this query that match the active date filter
+  // Find runs for this query matching the active date filter
   var runs = allRuns.filter(function(r) {
     if (r.query !== query) return false;
     var d = (r.created_at||'').slice(0,10);
@@ -521,131 +521,119 @@ function openQueryModal(query, page) {
     return true;
   });
 
-  // If no runs match the filter, fall back to all runs for this query
+  // Fallback: all runs for this query regardless of date
   if (!runs.length) {
     runs = allRuns.filter(function(r){ return r.query === query; });
   }
 
   if (!runs.length) { alert('No data found for this query.'); return; }
 
-  // Collect all matching run_ids
-  var runIds = {};
-  runs.forEach(function(r){ if (r.run_id) runIds[String(r.run_id)] = true; });
+  // Collect run_ids
+  var runIds = runs.map(function(r){ return r.run_id; }).filter(Boolean);
 
-  // Get all candidates across all matching runs
-  var allCandidates = allResults.filter(function(r){ return runIds[String(r.run_id)]; });
-
-  // Fallback by query field
-  if (!allCandidates.length) {
-    allCandidates = allResults.filter(function(r){ return r.query === query; });
-  }
-
-  // Deduplicate: if same candidate appears in multiple runs, keep highest score
-  var seen = {};
-  var deduped = [];
-  allCandidates.forEach(function(c) {
-    var key = c.candidate_id ? String(c.candidate_id) : (c.candidate_name + '_' + String(c.run_id));
-    if (!seen[key] || (c.score||0) > (seen[key].score||0)) {
-      seen[key] = c;
-    }
-  });
-  Object.keys(seen).forEach(function(k){ deduped.push(seen[k]); });
-
-  // Sort by verdict (good first, then acceptable, then bad), then by score desc
-  var verdictOrder = { good: 0, borderline: 1, bad: 2 };
-  deduped.sort(function(a,b){
-    var av = verdictOrder[a.verdict] !== undefined ? verdictOrder[a.verdict] : (a.match ? 0 : 2);
-    var bv = verdictOrder[b.verdict] !== undefined ? verdictOrder[b.verdict] : (b.match ? 0 : 2);
-    if (av !== bv) return av - bv;
-    return (b.score||0) - (a.score||0);
-  });
-
-  var totalCandidates = deduped.length;
-  var totalPages = Math.ceil(totalCandidates / PAGE_SIZE);
-  var candidates = deduped.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
-
-  // Get human reviews for this query
-  var reviews = allReviews.filter(function(r){ return r.query === query; });
-
-
-
-  var good = deduped.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
-  var acceptable = deduped.filter(function(c){ return c.verdict==='borderline'; }).length;
-  var bad = deduped.filter(function(c){ return c.verdict==='bad'||(c.match===false&&c.verdict!=='borderline'); }).length;
-  var total = deduped.length;
-  var runCount = Object.keys(runIds).length;
-
+  // Show modal immediately with loading state
   document.getElementById('modal-title').textContent = query;
-
-  // Build reviews HTML
-  var reviewsHtml = '';
-  if (reviews.length) {
-    reviewsHtml = '<div style="margin-bottom:1rem;padding:1rem;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.2);border-radius:10px">' +
-      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Team Reviews</div>';
-    reviews.forEach(function(r) {
-      var d = r.human_reviewed_at ? new Date(r.human_reviewed_at) : null;
-      var dateStr = d ? (String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getFullYear()).slice(2)) : '—';
-      reviewsHtml += '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(37,99,235,.15)">' +
-        '<div style="font-size:11px;color:var(--blue2);margin-bottom:4px;font-weight:600">' +
-          (r.human_reviewed_by||'anonymous') + ' · ' + dateStr +
-        '</div>' +
-        '<div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap">' + (r.human_review||'') + '</div>' +
-      '</div>';
-    });
-    reviewsHtml += '</div>';
-  }
-
-  document.getElementById('modal-stats').innerHTML =
-    '<div class="modal-stat"><strong style="color:#34d399">' + good + '</strong>Good fits</div>' +
-    '<div class="modal-stat"><strong style="color:#fbbf24">' + acceptable + '</strong>Acceptable</div>' +
-    '<div class="modal-stat"><strong style="color:#f87171">' + bad + '</strong>Not a fit</div>' +
-    '<div class="modal-stat"><strong>' + total + '</strong>Total candidates</div>' +
-    '<div class="modal-stat"><strong>' + runCount + '</strong>Run' + (runCount>1?'s':'') + '</div>';
-
-  // Insert reviews above candidates
-  var reviewsEl = document.getElementById('modal-reviews');
-  if (reviewsEl) reviewsEl.innerHTML = reviewsHtml;
-
-  var html = '';
-  // Show good first, then acceptable, then bad
-  var sorted = candidates.slice().sort(function(a,b){
-    var order = {good:0, borderline:1, bad:2};
-    var av = order[a.verdict] ?? (a.match ? 0 : 2);
-    var bv = order[b.verdict] ?? (b.match ? 0 : 2);
-    return av - bv;
-  });
-
-  candidates.forEach(function(c) {
-    var v = c.verdict || (c.match ? 'good' : 'bad'); var vDisplay = v === 'borderline' ? 'acceptable' : v;
-    var vLabel = v === 'good' ? '<span class="badge green">good fit</span>' :
-                 v === 'borderline' ? '<span class="badge yellow">acceptable</span>' :
-                 '<span class="badge red">not a fit</span>';
-    var profileLink = c.candidate_id ?
-      '<a href="https://matching.turing.com/developer/' + c.candidate_id + '" target="_blank" class="cand-link">profile ↗</a>' : '';
-    html += '<div class="candidate-row ' + vDisplay + '">' +
-      '<div class="cand-num">' + (c.position||'') + '</div>' +
-      '<div class="cand-info">' +
-        '<div class="cand-name">' + (c.candidate_name||'Unknown') + ' ' + profileLink + ' ' + vLabel + '</div>' +
-        '<div class="cand-reason">' + (c.reason||'No reason provided') + '</div>' +
-        (c.score ? '<div class="cand-score">Score: ' + c.score + '/100</div>' : '') +
-      '</div>' +
-    '</div>';
-  });
-
-  if (!html) html = '<p style="color:var(--text2);font-size:13px">No candidate details available. Run the query in Search Tester first.</p>';
-
-  // Add pagination
-  if (totalPages > 1) {
-    html += '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">';
-    html += '<span style="font-size:12px;color:var(--text2)">Page ' + page + ' of ' + totalPages + ' (' + totalCandidates + ' candidates)</span>';
-    if (page > 1) html += '<button onclick="openQueryModal(' + JSON.stringify(query) + ',' + (page-1) + ')" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:12px">← Prev</button>';
-    if (page < totalPages) html += '<button onclick="openQueryModal(' + JSON.stringify(query) + ',' + (page+1) + ')" style="padding:5px 12px;background:var(--blue);border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:12px">Next →</button>';
-    html += '</div>';
-  }
-
-  document.getElementById('modal-candidates').innerHTML = html;
+  document.getElementById('modal-stats').innerHTML = '<div class="modal-stat"><strong>Loading...</strong></div>';
+  document.getElementById('modal-reviews').innerHTML = '';
+  document.getElementById('modal-candidates').innerHTML = '<div style="color:var(--text2);font-size:13px;padding:2rem 0;text-align:center">Loading candidates...</div>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+
+  // Fetch candidates on-demand from API
+  fetch('/api/candidates?run_ids=' + runIds.join(','))
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      var allCandidates = data.candidates || [];
+
+      // Deduplicate by candidate_id — keep highest score
+      var seen = {};
+      allCandidates.forEach(function(c) {
+        var key = c.candidate_id ? String(c.candidate_id) : (c.candidate_name + '_' + String(c.run_id));
+        if (!seen[key] || (c.score||0) > (seen[key].score||0)) {
+          seen[key] = c;
+        }
+      });
+      var deduped = Object.values(seen);
+
+      // Sort: good → borderline → bad, then score desc
+      var verdictOrder = { good: 0, borderline: 1, bad: 2 };
+      deduped.sort(function(a,b){
+        var av = verdictOrder[a.verdict] !== undefined ? verdictOrder[a.verdict] : (a.match ? 0 : 2);
+        var bv = verdictOrder[b.verdict] !== undefined ? verdictOrder[b.verdict] : (b.match ? 0 : 2);
+        if (av !== bv) return av - bv;
+        return (b.score||0) - (a.score||0);
+      });
+
+      var totalCandidates = deduped.length;
+      var totalPages = Math.ceil(totalCandidates / PAGE_SIZE);
+      var paginated = deduped.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+      // Stats
+      var good = deduped.filter(function(c){ return c.verdict==='good'||c.match===true; }).length;
+      var acceptable = deduped.filter(function(c){ return c.verdict==='borderline'; }).length;
+      var bad = deduped.filter(function(c){ return c.verdict==='bad'||(c.match===false&&c.verdict!=='borderline'); }).length;
+
+      document.getElementById('modal-stats').innerHTML =
+        '<div class="modal-stat"><strong style="color:#34d399">' + good + '</strong>Good fits</div>' +
+        '<div class="modal-stat"><strong style="color:#fbbf24">' + acceptable + '</strong>Acceptable</div>' +
+        '<div class="modal-stat"><strong style="color:#f87171">' + bad + '</strong>Not a fit</div>' +
+        '<div class="modal-stat"><strong>' + totalCandidates + '</strong>Total candidates</div>' +
+        '<div class="modal-stat"><strong>' + runIds.length + '</strong>Run' + (runIds.length>1?'s':'') + '</div>';
+
+      // Reviews
+      var reviews = allReviews.filter(function(r){ return r.query === query; });
+      var reviewsHtml = '';
+      if (reviews.length) {
+        reviewsHtml = '<div style="margin-bottom:1rem;padding:1rem;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.2);border-radius:10px">' +
+          '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Team Reviews</div>';
+        reviews.forEach(function(r) {
+          var d = r.human_reviewed_at ? new Date(r.human_reviewed_at) : null;
+          var dateStr = d ? (String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getFullYear()).slice(2)) : '—';
+          reviewsHtml += '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(37,99,235,.15)">' +
+            '<div style="font-size:11px;color:var(--blue2);margin-bottom:4px;font-weight:600">' + (r.human_reviewed_by||'anonymous') + ' · ' + dateStr + '</div>' +
+            '<div style="font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap">' + (r.human_review||'') + '</div>' +
+          '</div>';
+        });
+        reviewsHtml += '</div>';
+      }
+      document.getElementById('modal-reviews').innerHTML = reviewsHtml;
+
+      // Candidates HTML
+      var html = '';
+      paginated.forEach(function(c) {
+        var v = c.verdict || (c.match ? 'good' : 'bad');
+        var vDisplay = v === 'borderline' ? 'acceptable' : v;
+        var vLabel = v === 'good' ? '<span class="badge green">good fit</span>' :
+                     v === 'borderline' ? '<span class="badge yellow">acceptable</span>' :
+                     '<span class="badge red">not a fit</span>';
+        var profileLink = c.candidate_id ?
+          '<a href="https://matching.turing.com/developer/' + c.candidate_id + '" target="_blank" class="cand-link">profile ↗</a>' : '';
+        html += '<div class="candidate-row ' + vDisplay + '">' +
+          '<div class="cand-num">' + (c.position||'') + '</div>' +
+          '<div class="cand-info">' +
+            '<div class="cand-name">' + (c.candidate_name||'Unknown') + ' ' + profileLink + ' ' + vLabel + '</div>' +
+            '<div class="cand-reason">' + (c.reason||'No reason provided') + '</div>' +
+            (c.score ? '<div class="cand-score">Score: ' + c.score + '/100</div>' : '') +
+          '</div>' +
+        '</div>';
+      });
+
+      if (!html) html = '<p style="color:var(--text2);font-size:13px">No candidate details available.</p>';
+
+      // Pagination
+      if (totalPages > 1) {
+        html += '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">';
+        html += '<span style="font-size:12px;color:var(--text2)">Page ' + page + ' of ' + totalPages + ' (' + totalCandidates + ' candidates)</span>';
+        if (page > 1) html += '<button onclick="openQueryModal(' + JSON.stringify(query) + ',' + (page-1) + ')" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:12px">← Prev</button>';
+        if (page < totalPages) html += '<button onclick="openQueryModal(' + JSON.stringify(query) + ',' + (page+1) + ')" style="padding:5px 12px;background:var(--blue);border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:12px">Next →</button>';
+        html += '</div>';
+      }
+
+      document.getElementById('modal-candidates').innerHTML = html;
+    })
+    .catch(function(e) {
+      document.getElementById('modal-candidates').innerHTML = '<p style="color:#f87171;font-size:13px">Error loading candidates: ' + e.message + '</p>';
+    });
 }
 
 function closeModal() {
