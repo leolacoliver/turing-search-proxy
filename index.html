@@ -385,16 +385,31 @@ async function runQuery(query, pageSize, runId) {
     if (parseInt(pageSize) >= 500) {
       log('Fetching 500 results in 5 pages...');
       for (var pg = 1; pg <= 5; pg++) {
-        var pParams = new URLSearchParams({ query: query, pageSize: 100, page: pg });
-        var pRes = await fetch(PROXY + '/api/search?' + pParams);
-        if (!pRes.ok) { var txt = await pRes.text(); throw new Error('HTTP ' + pRes.status + ': ' + txt.slice(0, 200)); }
-        var pData = await pRes.json();
-        if (pData.error) throw new Error(pData.error);
-        var pageResults = pData.results || pData.talents || pData.data || [];
-        profiles = profiles.concat(pageResults);
-        log('Page ' + pg + '/5 — ' + profiles.length + ' profiles so far.');
-        if (pageResults.length < 100) break; // no more results
-        if (pg < 5) await new Promise(function(r){ setTimeout(r, 1000); });
+        var pageOk = false;
+        for (var pgAttempt = 1; pgAttempt <= 3; pgAttempt++) {
+          try {
+            var pParams = new URLSearchParams({ query: query, pageSize: 100, page: pg });
+            var pRes = await fetch(PROXY + '/api/search?' + pParams);
+            if (!pRes.ok) { var txt = await pRes.text(); throw new Error('HTTP ' + pRes.status + ': ' + txt.slice(0, 200)); }
+            var pData = await pRes.json();
+            if (pData.error) throw new Error(pData.error);
+            var pageResults = pData.results || pData.talents || pData.data || [];
+            profiles = profiles.concat(pageResults);
+            log('Page ' + pg + '/5 — ' + profiles.length + ' profiles so far.');
+            pageOk = true;
+            if (pageResults.length < 100) { pg = 99; } // no more results, exit loop
+            break;
+          } catch(pgErr) {
+            if (pgAttempt < 3) {
+              log('Page ' + pg + ' attempt ' + pgAttempt + ' failed, retrying in 3s...');
+              await new Promise(function(r){ setTimeout(r, 3000); });
+            } else {
+              log('Page ' + pg + ' failed after 3 attempts: ' + pgErr.message + '. Using ' + profiles.length + ' profiles collected so far.');
+              pg = 99; // exit loop
+            }
+          }
+        }
+        if (pg < 5) await new Promise(function(r){ setTimeout(r, 2000); });
       }
     } else {
       var params = new URLSearchParams({ query: query, pageSize: pageSize, page: '1' });
