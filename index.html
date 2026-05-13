@@ -117,11 +117,15 @@ select option{background:var(--bg3);}
       </div>
       <div class="field">
         <label>Page Size</label>
-        <select id="pageSize">
+        <select id="pageSize" onchange="updateEstimate()">
           <option value="36">36</option>
           <option value="50">50</option>
           <option value="100" selected>100</option>
+          <option value="500">500 (extended)</option>
         </select>
+        <div id="time-estimate" style="font-size:11px;color:var(--yellow);margin-top:6px;display:none">
+          ⚠️ ~12 min per query at 500 results
+        </div>
       </div>
     </div>
     <div id="error-box" class="error-box" style="display:none"></div>
@@ -394,8 +398,8 @@ async function runQuery(query, pageSize, runId) {
   log('Evaluating ' + Math.min(s.profiles.length, 100) + ' profiles...');
   updateSummaryRow(query);
 
-  var toEval = s.profiles.slice(0, 100);
-  var BATCH = 5, totalBatches = Math.ceil(toEval.length / BATCH);
+  var toEval = s.profiles.slice(0, 500);
+  var BATCH = 10, totalBatches = Math.ceil(toEval.length / BATCH);
   var MAX_RETRIES = 4, PAUSE_MS = 1500;
 
   for (var i = 0; i < toEval.length; i += BATCH) {
@@ -450,6 +454,20 @@ async function runQuery(query, pageSize, runId) {
     if (data3.ok) log('Saved to Supabase.');
     else log('Supabase warning: ' + JSON.stringify(data3));
   } catch (e) { log('Warning: could not save: ' + e.message); }
+}
+
+function updateEstimate() {
+  var ps = parseInt(document.getElementById('pageSize').value);
+  var el = document.getElementById('time-estimate');
+  if (ps >= 500) {
+    var queries = (document.getElementById('queries').value.trim().split('
+').filter(Boolean).length) || 1;
+    var mins = Math.round(queries * 12);
+    el.textContent = '⚠️ ~' + mins + ' min estimated (' + queries + ' quer' + (queries>1?'ies':'y') + ' × ~12 min each at 500 results)';
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 async function runAll() {
