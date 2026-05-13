@@ -380,12 +380,31 @@ async function runQuery(query, pageSize, runId) {
 
   log('Searching "' + query + '"...');
   try {
-    var params = new URLSearchParams({ query: query, pageSize: pageSize, page: '1' });
-    var res = await fetch(PROXY + '/api/search?' + params);
-    if (!res.ok) { var txt = await res.text(); throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 200)); }
-    var data = await res.json();
-    if (data.error) throw new Error(data.error);
-    s.profiles = data.results || data.talents || data.data || [];
+    // For 500 results, fetch in 5 pages of 100 to avoid timeout
+    var profiles = [];
+    if (parseInt(pageSize) >= 500) {
+      log('Fetching 500 results in 5 pages...');
+      for (var pg = 1; pg <= 5; pg++) {
+        var pParams = new URLSearchParams({ query: query, pageSize: 100, page: pg });
+        var pRes = await fetch(PROXY + '/api/search?' + pParams);
+        if (!pRes.ok) { var txt = await pRes.text(); throw new Error('HTTP ' + pRes.status + ': ' + txt.slice(0, 200)); }
+        var pData = await pRes.json();
+        if (pData.error) throw new Error(pData.error);
+        var pageResults = pData.results || pData.talents || pData.data || [];
+        profiles = profiles.concat(pageResults);
+        log('Page ' + pg + '/5 — ' + profiles.length + ' profiles so far.');
+        if (pageResults.length < 100) break; // no more results
+        if (pg < 5) await new Promise(function(r){ setTimeout(r, 1000); });
+      }
+    } else {
+      var params = new URLSearchParams({ query: query, pageSize: pageSize, page: '1' });
+      var res = await fetch(PROXY + '/api/search?' + params);
+      if (!res.ok) { var txt = await res.text(); throw new Error('HTTP ' + res.status + ': ' + txt.slice(0, 200)); }
+      var data = await res.json();
+      if (data.error) throw new Error(data.error);
+      profiles = data.results || data.talents || data.data || [];
+    }
+    s.profiles = profiles;
     log('Got ' + s.profiles.length + ' profiles.');
     updatePanel(query); updateSummaryRow(query);
     if (!s.profiles.length) { s.status = 'done'; updateSummaryRow(query); updatePanel(query); return; }
