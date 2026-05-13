@@ -460,8 +460,7 @@ function updateEstimate() {
   var ps = parseInt(document.getElementById('pageSize').value);
   var el = document.getElementById('time-estimate');
   if (ps >= 500) {
-    var queries = (document.getElementById('queries').value.trim().split('
-').filter(Boolean).length) || 1;
+    var queries = (document.getElementById('queries').value.trim().split('\n').filter(Boolean).length) || 1;
     var mins = Math.round(queries * 12);
     el.textContent = '⚠️ ~' + mins + ' min estimated (' + queries + ' quer' + (queries>1?'ies':'y') + ' × ~12 min each at 500 results)';
     el.style.display = 'block';
