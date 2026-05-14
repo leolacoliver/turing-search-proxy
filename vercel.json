@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/search.js": { "maxDuration": 30 },
+    "api/search.js": { "maxDuration": 60 },
     "api/evaluate.js": { "maxDuration": 60 },
     "api/turing-evaluate.js": { "maxDuration": 60 },
     "api/runs.js": { "maxDuration": 30 },
