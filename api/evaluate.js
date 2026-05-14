@@ -140,7 +140,7 @@ Verdict rules:
 - "bad": score < 60
 
 Domain classification reference:
-\${domainContext}
+${domainContext}
 
 ==========
 HOW TO EVALUATE
@@ -270,16 +270,16 @@ Score scale:
 - 60-79: most constraints met, minor gaps or ambiguous evidence
 - 0-59: one or more hard constraints clearly missing
 
-You MUST return exactly \${profiles.length} result objects — one per candidate, in order.
+You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
 
 Edge cases:
 - If the query has zero hard constraints, count any talent whose role broadly fits.
 
 ==========
-QUERY: "\${query}"
+QUERY: "${query}"
 
 CANDIDATES:
-\${text}`;
+${text}`;
 
   try {
     const llmRes = await fetch("https://api.openai.com/v1/chat/completions", {
