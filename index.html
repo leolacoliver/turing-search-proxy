@@ -445,7 +445,7 @@ async function runQuery(query, pageSize, runId) {
     var res3 = await fetch(PROXY + '/api/runs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ runId: runId, query: query, queryDomain: s.domain, querySubdomain: s.subdomain, totalResults: total, goodFits: good, borderlineFits: Object.keys(s.evaluations).filter(function(k){return s.evaluations[k].borderline;}).length, matchRate: matchRate })
+      body: JSON.stringify({ runId: runId, query: query, queryDomain: s.domain, querySubdomain: s.subdomain, totalResults: total, goodFits: good, borderlineFits: Object.keys(s.evaluations).filter(function(k){return s.evaluations[k].borderline;}).length, matchRate: matchRate, evalSize: parseInt(pageSize) })
     });
     var data3 = await res3.json();
     if (data3.ok) log('Saved to Supabase.');
