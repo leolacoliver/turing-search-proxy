@@ -117,6 +117,8 @@ ${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
 - "Unknown" → if none match
 `.trim();
 
+  const currentDate = new Date().toISOString().slice(0, 10);
+
   const prompt = `You are a strict relevance evaluator for a talent-search engine.
 
 ==========
@@ -129,32 +131,39 @@ Reply with exactly ONE JSON object and nothing else (no markdown, no prose).
   "query_domain": "<domain>",
   "query_subdomain": "<subdomain>",
   "results": [
-    {"index": 0, "score": <int 0-100>, "verdict": "good" | "borderline" | "bad", "reason": "<max 200 chars>"},
+    {"index": 0, "score": <int 0-10>, "verdict": "relevant" | "not_relevant", "reason": "<max 200 chars>"},
     ...
   ]
 }
 
-Verdict rules:
-- "good": score >= 80
-- "borderline": score >= 60 and < 80
-- "bad": score < 60
+Score guidance (per-candidate, integer 0-10):
+- 9-10: all hard constraints clearly met, strong evidence
+- 7-8:  all hard constraints met, decent evidence
+- 5-6:  most constraints met, minor gaps or ambiguous evidence
+- 3-4:  one hard constraint clearly missing
+- 0-2:  multiple hard constraints missing or fundamental mismatch
 
-Domain classification reference:
+Verdict rule:
+- "relevant"     when score >= 5
+- "not_relevant" when score <  5
+
+Domain classification reference (internal — do not output):
 ${domainContext}
+
+CURRENT_DATE: ${currentDate}
 
 ==========
 HOW TO EVALUATE
 ==========
 
-STEP 1 — Parse the query into HARD constraints and SOFT preferences.
+STEP 1 — Parse HARD constraints and SOFT preferences.
 
-HARD constraints (failing ANY one = "bad"):
+HARD constraints (failing ANY one = not_relevant):
 
 - role / domain
-  e.g. "Business Analyst", "Python Developer", "Cardiologist"
 
 - location
-  e.g. "India", "LATAM", "Non-US", "Egypt"
+  e.g. "India", "LATAM", "Non-US", "Egypt", "New York"
   Region definitions:
     LATAM   = Mexico, Brazil, Colombia, Argentina, Chile, Peru, Uruguay, Venezuela, Ecuador, Bolivia, Paraguay, Costa Rica, Panama, Guatemala, Honduras, El Salvador, Nicaragua, Dominican Republic, Cuba
     Africa  = Nigeria, Kenya, Ghana, Egypt, Ethiopia, South Africa, Tanzania, Uganda, Senegal, Cameroon, and all other African countries
@@ -163,9 +172,12 @@ HARD constraints (failing ANY one = "bad"):
     Asia    = India, Pakistan, Philippines, Bangladesh, Vietnam, Indonesia, Malaysia, Sri Lanka, Nepal, and all other Asian countries
     Non-US  = anywhere except United States
 
+  CITY / METRO — strict enforcement when a specific city is mentioned:
+    A candidate located in the named country but in a different city = not_relevant.
+    Missing / ambiguous city in candidate data: give benefit of the doubt.
+
 - minimum YOE
   Enforce ONLY if explicitly stated ("3+ years", "5+ years of Python").
-  Distinguish carefully:
     • "5+ years of Python" → verify Python-specific YOE, not total career YOE
     • "5+ years of experience" → total career YOE is acceptable
   Phrasings like "junior" or "1-2 yoe" do NOT impose an upper limit on seniors.
@@ -173,107 +185,95 @@ HARD constraints (failing ANY one = "bad"):
 - required language(s)
   e.g. "Arabic", "Portuguese + English"
   Native language can be inferred from country (Brazil → Portuguese, Egypt → Arabic, Japan → Japanese).
-  English proficiency requires explicit evidence (resume in English, international work, English listed) unless the query only asks for a non-English language.
+  English proficiency requires explicit evidence unless the query only asks for a non-English language.
 
 - required skills
-  e.g. "Python", "SQL", "Spring Boot"
   When query lists multiple skills with "and", "along with", "including", "as well as":
     • ALL listed skills are hard constraints
-    • Missing 1 skill = "borderline" (bad if confidence is low)
-    • Missing 2+ skills = "bad"
+    • Missing 1 skill = borderline (not_relevant if confidence is low)
+    • Missing 2+ skills = not_relevant
 
 - employment type
-  Contract/freelance work does NOT satisfy requirements implying full-time employment unless the query explicitly allows it (e.g. "contractors welcome", "freelance OK").
-  Internships do not count as professional experience for YOE unless explicitly stated.
+  Contract/freelance does NOT satisfy full-time requirements unless explicitly allowed.
+  Internships do not count as professional YOE unless explicitly stated.
 
 - rate ceiling
-  e.g. "$20/hr" — apply ONLY when talent.rate is non-null. Null rate = skip, do NOT fail.
-  "Low cost", "affordable", "budget" = soft preference only. Only enforce a numeric ceiling if explicitly given.
+  Apply ONLY when talent.rate is non-null. Null rate = skip, do NOT fail.
+  "Low cost", "affordable", "budget" = soft preference only.
 
 - degree / certification
-  Apply the degree level exactly as stated in the query:
-    • "PhD" → only completed PhDs qualify; pursuing PhD = "bad" (borderline only if query is ambiguous)
-    • "Master's" / "MSc" → only completed Master's qualify; Bachelor's = "bad"; pursuing Master's = "borderline"
-    • "Bachelor's" / "undergraduate degree" → completed Bachelor's required; still pursuing = "bad"
-    • "undergraduate students", "undergrad students" → candidate must be CURRENTLY ENROLLED in a Bachelor's degree program, with expected graduation in the future. Completed Bachelor's = "bad". Look for: isCurrent=true on education, graduation year in the future, or explicit "pursuing"/"expected graduation YYYY" in the resume. A candidate with a completed BSc who is now doing a Master's does NOT qualify.
-    • If no degree level is mentioned → do not infer one; do not penalize for any degree level
-    • Field specificity: "Physics PhD" is NOT met by a PhD in Business, Education, or unrelated field
-  For professional certifications (CFA, CPA, CISSP, CEH, etc.):
-    • Only fully obtained certifications qualify
-    • "Pursuing CFA Level 2" does NOT satisfy "CFA required" unless query says "pursuing" or "candidate"
+    • "PhD" → only completed PhDs qualify; pursuing PhD = not_relevant
+    • "Master's" / "MSc" → only completed Master's qualify; pursuing = borderline
+    • "Bachelor's" → completed required; still pursuing = not_relevant
+    • "undergraduate students" → CURRENTLY ENROLLED in Bachelor's, graduation in the future.
+      Completed BSc + now doing Master's = NOT an undergraduate student.
+    • No degree mentioned → do not infer or penalize
+    • Field specificity: "Physics PhD" ≠ PhD in Business or unrelated field
+  Certifications (CFA, CPA, CISSP, CEH, etc.): only fully obtained qualify.
+
+  Education timing — use CURRENT_DATE (${currentDate}) when reasoning about enrollment:
+    • Resume "Expected <date>" where date is on or before CURRENT_DATE → degree likely completed; trust structured marker
+    • Resume "Expected <date>" clearly in the future → treat as still in progress
+    • "PhD Candidate" or "ABD" in resume header = stale artifact; trust structured [completed]/[enrolled] marker
 
 SOFT preferences (tie-breakers only — never fail alone):
 - vague words: "strong", "senior", "detail-oriented", "analytical", "low cost", "premium"
 
-If a constraint is genuinely ambiguous in the talent data → benefit of the doubt → treat as satisfied.
+If a constraint is genuinely ambiguous → benefit of the doubt → treat as satisfied.
 
-STEP 2 — Identify query group and apply group-specific rules:
+STEP 2 — Apply group-specific rules:
 
 GROUP 1 — SWE/Technical (Python, JavaScript, Java, C++, FastAPI, DevOps, SQL...):
-- All hard constraints apply strictly — NO exceptions
-- YOE in specific technology ≠ total career YOE — verify skill-specific years
-- Adjacent skills can justify "borderline" ONLY if the primary skill is present but a secondary one is missing
-- If the primary required skill or YOE minimum is missing → "bad" immediately
+- All hard constraints apply strictly
+- YOE in specific technology ≠ total career YOE
+- Adjacent skills justify borderline ONLY if primary skill is present
 
 GROUP 2 — BA with Language (Business Analyst - Arabic, BA - Japanese...):
 - PRIMARY criterion: language proficiency — NOT BA job title
-- "good" if: native speaker, translator, interpreter, language teacher, linguistics background, or extensive work/education in that language
-- Native language can be inferred from country (Brazil → Portuguese, Egypt → Arabic)
+- relevant if: native speaker, translator, interpreter, language teacher, linguistics background, or extensive work/education in that language
+- Native language inferred from country (Brazil → Portuguese, Egypt → Arabic)
 - Translator/interpreter = fully equivalent to BA experience
-- Follow location constraints if required on the search query
 - Do NOT penalize for lacking BA title if language proficiency is clear
 
-GROUP 3 — AI Quality/Annotator with Language (AI Quality Analyst - Korean...):
+GROUP 3 — AI Quality/Annotator with Language:
 - Same as Group 2, even more flexible
-- Any native/fluent speaker with basic analytical ability = "good"
-- Cultural familiarity with the language/region is a positive signal
+- Any native/fluent speaker with basic analytical ability = relevant
 
-GROUP 4 — STEM Expert (Physics Expert, Math Expert, Chemistry Expert...):
-- PRIMARY criterion: education level — PhD or MSc in the specific field required
-- Bachelor's in field = "borderline" at best; "bad" if PhD is explicitly required
-- Location constraints (US vs non-US) must be met exactly
-- Field specificity matters: Physics ≠ general STEM, Biology ≠ Chemistry
-- Look for specific subdomains if mentioned in query (e.g. computational modeling, quantum)
+GROUP 4 — STEM Expert (Physics, Math, Chemistry...):
+- PRIMARY criterion: education — PhD or MSc in the specific field
+- Bachelor's = borderline; not_relevant if PhD explicitly required
+- Location (US vs non-US) must be met exactly
+- Field specificity: Physics ≠ general STEM
 
-GROUP 4B — STEM + Code hybrid (Computational Physics, Math & Python...):
-- Requires BOTH: strong domain education (PhD/MSc preferred) AND coding proficiency
-- Neither alone is sufficient — "borderline" if only one is present
+GROUP 4B — STEM + Code hybrid:
+- Requires BOTH domain education (PhD/MSc) AND coding proficiency
+- Neither alone is sufficient
 
-GROUP 5 — Agentic/Prompt & Verifier (Agentic completion, Function Calling...):
+GROUP 5 — Agentic/Prompt & Verifier:
 - PRIMARY criterion: technical reasoning + excellent English communication
-- No specific language/framework required — any solid technical background qualifies
-- LLM/API/JSON/function-calling experience = strong positive signal
-- MORE FLEXIBLE than Group 1 — adjacent backgrounds qualify
-- YOE as stated in the query
+- LLM/API/JSON/function-calling = strong positive signal
+- MORE FLEXIBLE than Group 1
 
 GROUP 6 — Domain Expert (Finance, Legal, Medical, Cybersecurity):
-- PRIMARY criterion: direct professional experience in the domain
-- Finance: financial analysts, CPAs, CFAs, auditors — hands-on domain work required. Apply specific constraints if query mentions certifications or market (e.g. middle market private equity)
-- Legal: lawyers, paralegals, compliance officers — law degree or bar admission preferred; hands-on domain work required
-- Medical: MDs, researchers, pharmacologists — field-specific must match if stated in query
-- Cybersecurity: security engineers, SOC analysts — CISSP/CEH/similar = strong signal; pursuing certifications ≠ holding them
-- General business experience without domain specificity = "bad"
+- Finance: hands-on domain work required; apply specific constraints (certifications, market type)
+- Legal: law degree or bar admission preferred; hands-on work required
+- Medical: field-specific must match if stated
+- Cybersecurity: CISSP/CEH/similar = strong signal; pursuing ≠ holding
+- General business without domain specificity = not_relevant
 
-STEP 3 — Score each candidate using per-talent fields:
-- role, workExperience[].position, workExperience[].employmentType → role/domain/employment type
+STEP 3 — Score and decide for each candidate.
+
+Fields to check:
+- role, workExperience[].position, workExperience[].employmentType → role/domain/employment
 - country, continent → location
-- yearsOfExperience, skills[].yearsOfExperience → YOE (total vs skill-specific)
+- yearsOfExperience, skills[].yearsOfExperience → YOE
 - skills[].name → required skills
 - languages[] → required languages
 - rate → rate ceiling (skip if null)
 - education[].degree, education[].isCurrent, certifications[] → degree/cert
-- education[].isCurrent, education[].graduationYear → for "student" queries, verify degree is actively in progress
-
-Score scale:
-- 90-100: all hard constraints clearly met, strong evidence throughout
-- 80-89: all hard constraints met, good evidence
-- 60-79: most constraints met, minor gaps or ambiguous evidence
-- 0-59: one or more hard constraints clearly missing
 
 You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
-
-Edge cases:
-- If the query has zero hard constraints, count any talent whose role broadly fits.
+Reason must be <= 200 chars, concrete and specific. No hedging language.
 
 ==========
 QUERY: "${query}"
@@ -312,17 +312,32 @@ ${text}`;
     const queryDomain = parsed.query_domain || "Unknown";
     const querySubdomain = parsed.query_subdomain || "Unknown";
 
-    const remapped = parsed.results.map(item => ({
-      ...item,
-      index: indexMap[item.index] ?? item.index,
-      score: item.score ?? (item.verdict === "good" ? 80 : item.verdict === "borderline" ? 67 : 30),
-      verdict: item.verdict || (item.match ? "good" : "bad"),
-      // match = true only for good (>= 75%), borderline is separate
-      match: item.verdict === "good",
-      borderline: item.verdict === "borderline",
-      query_domain: queryDomain,
-      query_subdomain: querySubdomain,
-    }));
+    const remapped = parsed.results.map(item => {
+      // New prompt returns score 0-10 and verdict relevant/not_relevant
+      // Map to internal format: score 0-100, verdict good/borderline/bad
+      const rawScore = item.score ?? 5;
+      const score100 = rawScore * 10; // convert 0-10 → 0-100
+      const rawVerdict = item.verdict || "not_relevant";
+
+      let verdict, match, borderline;
+      if (rawVerdict === "relevant") {
+        if (score100 >= 80) { verdict = "good"; match = true; borderline = false; }
+        else { verdict = "borderline"; match = false; borderline = true; }
+      } else {
+        verdict = "bad"; match = false; borderline = false;
+      }
+
+      return {
+        ...item,
+        index: indexMap[item.index] ?? item.index,
+        score: score100,
+        verdict,
+        match,
+        borderline,
+        query_domain: queryDomain,
+        query_subdomain: querySubdomain,
+      };
+    });
 
     // Build a lookup of candidate input text by global index for traceability
     const inputByGlobalIdx = {};
