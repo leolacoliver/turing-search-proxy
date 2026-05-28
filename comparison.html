@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turing · Period Comparison</title>
+<script>
+if (sessionStorage.getItem("turing_auth") !== "true") {
+  window.location.href = "/login.html?redirect=/comparison.html";
+}
+</script>
+<style>
+:root{
+  --bg:#08090f;--bg2:#0f1220;--bg3:#161b2e;
+  --border:#1e2a42;--blue:#2563eb;--blue2:#3b82f6;
+  --green:#10b981;--yellow:#f59e0b;--red:#ef4444;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Nav */
+nav{background:#fff;border-bottom:3px solid var(--blue);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;position:sticky;top:0;z-index:100;}
+.nav-left{display:flex;align-items:center;gap:12px;}
+.nav-badge{font-size:11px;font-weight:600;color:var(--blue);background:rgba(37,99,235,.1);padding:2px 8px;border-radius:99px;border:1px solid rgba(37,99,235,.2);}
+nav a{font-size:13px;color:#374151;text-decoration:none;}
+nav a:hover{color:var(--blue);}
+
+/* Layout */
+.page{max-width:1200px;margin:0 auto;padding:2rem 1.5rem;}
+.page-title{font-size:20px;font-weight:700;margin-bottom:4px;}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;}
+
+/* Controls */
+.controls{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;}
+.ctrl-group{display:flex;flex-direction:column;gap:4px;}
+.ctrl-group label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.ctrl-group input{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:7px;font-size:13px;width:150px;}
+.ctrl-group input:focus{outline:none;border-color:var(--blue);}
+.vs-label{font-size:20px;color:var(--text3);padding-bottom:4px;align-self:flex-end;}
+.cmp-btn{padding:8px 22px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;align-self:flex-end;}
+.cmp-btn:hover{background:#1d4ed8;}
+.period-sep{width:1px;background:var(--border);align-self:stretch;margin:0 4px;}
+
+/* Summary KPIs */
+.kpi-row{display:flex;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.85rem 1.25rem;flex:1;min-width:130px;}
+.kpi-val{font-size:22px;font-weight:700;line-height:1;}
+.kpi-lbl{font-size:11px;color:var(--text2);margin-top:3px;}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* Table */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.cmp-table{width:100%;border-collapse:collapse;font-size:12px;}
+.cmp-table th{padding:9px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);border-bottom:1px solid var(--border);background:var(--bg3);position:sticky;top:56px;z-index:5;}
+.cmp-table th.right{text-align:right;}
+.cmp-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle;}
+.cmp-table td.right{text-align:right;}
+.cmp-table tr:last-child td{border-bottom:none;}
+.cmp-table tr:hover td{background:rgba(255,255,255,.02);}
+
+/* Row types */
+.row-domain td{background:rgba(37,99,235,.06);font-weight:700;font-size:12px;color:var(--text);border-top:1px solid rgba(37,99,235,.15);}
+.row-domain td:first-child{padding-left:12px;}
+.row-sub td{background:rgba(255,255,255,.01);font-size:12px;color:var(--text2);}
+.row-sub td:first-child{padding-left:28px;}
+.row-query td{font-size:11px;color:var(--text3);}
+.row-query td:first-child{padding-left:48px;}
+.row-total td{background:var(--bg3);font-weight:700;font-size:12px;border-top:2px solid var(--border);}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;min-width:44px;}
+.badge.green{background:rgba(16,185,129,.15);color:#34d399;}
+.badge.yellow{background:rgba(245,158,11,.15);color:#fbbf24;}
+.badge.red{background:rgba(239,68,68,.12);color:#f87171;}
+.delta-up{color:#34d399;font-weight:700;}
+.delta-down{color:#f87171;font-weight:700;}
+.delta-flat{color:var(--text3);}
+.delta-cell{min-width:60px;text-align:right;}
+
+/* Period headers */
+.period-header{background:var(--bg3);padding:6px 12px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);display:flex;gap:2px;}
+.period-a{color:#60a5fa;}
+.period-b{color:#34d399;}
+
+/* States */
+.empty{text-align:center;padding:4rem;color:var(--text3);font-size:13px;}
+.loading-msg{text-align:center;padding:2rem;color:var(--text2);font-size:13px;}
+.error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:1rem;}
+
+/* Expand toggle */
+.toggle-expand{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0;margin-left:6px;}
+.toggle-expand:hover{color:var(--text2);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
+      <svg width="90" height="14" viewBox="0 0 796 125" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M372.049 19.9146V49.5709C372.049 56.713 373.984 62.216 377.991 65.9214C381.987 69.6165 387.915 71.4029 395.644 71.4029C403.373 71.4029 409.301 69.6165 413.297 65.9214C417.305 62.216 419.239 56.713 419.239 49.5709V19.9146H434.469V48.3365C434.469 60.5348 431.011 69.1748 424.528 74.7837C418.023 80.4114 408.339 83.107 395.644 83.107C382.95 83.107 373.266 80.4112 366.761 74.7837C360.278 69.1748 356.819 60.5349 356.819 48.3365V19.9146H372.049ZM758.731 18.1519C772.91 18.1519 784.664 20.7989 795.881 26.4986V39.4117C783.662 32.795 772.322 29.8561 759.348 29.856C749.002 29.856 740.687 31.74 734.933 35.3033C729.143 38.8895 725.966 44.171 725.966 50.8052C725.966 57.3525 729.1 62.547 734.837 66.0669C740.536 69.5631 748.783 71.4029 759.084 71.4029C766.384 71.4029 773.243 70.4231 780.013 68.4634L780.563 68.3043V55.4224H742.564V46.0113H795.793V74.7593C784.251 80.6317 773.528 83.107 759.524 83.107C744.002 83.107 731.784 80.0566 723.469 74.4849C715.191 68.9373 710.736 60.863 710.736 50.6294C710.736 40.4369 715.15 32.3611 723.309 26.8033C731.502 21.2224 743.522 18.1519 758.731 18.1519ZM337.656 19.9146V31.3541H300.186V82.0484H284.956V31.3541H247.575V19.9146H337.656ZM505.287 19.9146C512.436 19.9146 521.076 20.2072 527.917 22.8072C531.324 24.1023 534.239 25.9547 536.303 28.5875C538.359 31.2105 539.616 34.6661 539.616 39.2564C539.616 44.8018 537.767 49.3169 534.267 52.7535C530.752 56.2055 525.511 58.6252 518.643 59.8423L517.136 60.1099L540.843 82.0484H522.083L500.746 61.3296H474.11V82.0484H458.879V19.9146H505.287ZM577.806 19.9146V82.0484H562.576V19.9146H577.806ZM618.807 19.9146L674.598 67.3492V19.9146H689.828V82.0484H671.473L617.446 35.9312V82.0484H602.214V19.9146H618.807ZM474.11 31.6187V49.6255H503.788C512.945 49.6255 517.256 49.0184 520.165 47.6109L520.173 47.606C521.599 46.8933 522.669 45.9652 523.375 44.7808C524.079 43.5991 524.385 42.2213 524.385 40.6666C524.385 39.0222 524.055 37.5775 523.317 36.3511C522.623 35.1985 521.599 34.2905 520.26 33.5943L519.98 33.4537C517.066 32.1372 512.759 31.6187 503.258 31.6187H474.11Z" fill="#0f172a"/><path d="M99.9584 0C104.509 0 108.894 0.0476822 113.282 0.158151C113.265 0.167912 110.433 0.962699 109.448 1.15663C66.8824 0.277622 29.7499 6.80093 29.7499 14.299C29.7499 22.1136 69.3435 28.45 118.183 28.45C154.57 28.45 185.822 24.9305 199.395 19.9064C195.882 29.5989 152.706 37.261 99.9564 37.261C90.3886 37.261 81.1355 37.0092 72.3769 36.5386C93.9542 46.1626 111.997 58.7936 111.997 73.1567C111.997 73.2628 112.103 96.1408 112.103 124.836C111.803 124.836 111.359 118.932 111.359 118.932C106.568 27.3503 -7.02057 43.7004 0.342999 17.7744C3.18347 7.77036 47.132 0 99.9584 0Z" fill="#2563eb"/></svg>
+    </a>
+    <span class="nav-badge">Period Comparison</span>
+  </div>
+  <div style="display:flex;gap:16px;align-items:center;">
+    <a href="/">Search Tester</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <button onclick="sessionStorage.removeItem('turing_auth');window.location.href='/login.html'" style="font-size:12px;padding:5px 12px;background:transparent;border:1px solid #ddd;border-radius:6px;cursor:pointer;color:#666;">Logout</button>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-title">Period Comparison</div>
+  <div class="page-sub">Compare match rates for the same queries across two date ranges. Only queries that ran in both periods are shown.</div>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <label>Period A — From</label>
+      <input type="date" id="cmp-a-from">
+    </div>
+    <div class="ctrl-group">
+      <label>Period A — To</label>
+      <input type="date" id="cmp-a-to">
+    </div>
+    <div class="vs-label">vs</div>
+    <div class="ctrl-group">
+      <label>Period B — From</label>
+      <input type="date" id="cmp-b-from">
+    </div>
+    <div class="ctrl-group">
+      <label>Period B — To</label>
+      <input type="date" id="cmp-b-to">
+    </div>
+    <button class="cmp-btn" onclick="runComparison()">Compare</button>
+  </div>
+
+  <div id="error-box" class="error-box" style="display:none"></div>
+  <div id="kpi-row" class="kpi-row" style="display:none"></div>
+  <div id="results-wrap" class="table-wrap" style="display:none">
+    <div id="results-table"></div>
+  </div>
+  <div id="empty-msg" class="empty">Set date ranges above and click Compare.</div>
+</div>
+
+<script>
+var allRuns = [];
+
+// Load all runs from dashboard API
+async function loadRuns() {
+  try {
+    var res = await fetch('/api/dashboard');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    allRuns = data.runs || [];
+    prefillDates();
+  } catch(e) {
+    showError('Failed to load data: ' + e.message);
+  }
+}
+
+function prefillDates() {
+  if (!allRuns.length) return;
+  var dates = allRuns.map(function(r){ return (r.created_at||'').slice(0,10); }).filter(Boolean).sort();
+  var earliest = dates[0];
+  var latest = dates[dates.length-1];
+  var mid = dates[Math.floor(dates.length/2)];
+  document.getElementById('cmp-a-from').value = earliest;
+  document.getElementById('cmp-a-to').value = mid;
+  document.getElementById('cmp-b-from').value = mid;
+  document.getElementById('cmp-b-to').value = latest;
+}
+
+function showError(msg) {
+  var el = document.getElementById('error-box');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function badge(pct) {
+  var cls = pct >= 60 ? 'green' : pct >= 30 ? 'yellow' : 'red';
+  return '<span class="badge ' + cls + '">' + pct + '%</span>';
+}
+
+function delta(d) {
+  if (d > 0) return '<span class="delta-up">+' + d + '%</span>';
+  if (d < 0) return '<span class="delta-down">' + d + '%</span>';
+  return '<span class="delta-flat">—</span>';
+}
+
+function filterRuns(from, to) {
+  return allRuns.filter(function(r) {
+    var d = (r.created_at||'').slice(0,10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+}
+
+function aggregateByQuery(runs) {
+  var map = {};
+  runs.forEach(function(r) {
+    var q = r.query || '';
+    if (!map[q]) map[q] = {
+      domain: r.query_domain || 'Unknown',
+      subdomain: r.query_subdomain || 'Unknown',
+      total: 0, good: 0, borderline: 0
+    };
+    map[q].total     += r.total_results || 0;
+    map[q].good      += r.good_fits || 0;
+    map[q].borderline += r.good_fits_borderline || 0;
+  });
+  return map;
+}
+
+function runComparison() {
+  document.getElementById('error-box').style.display = 'none';
+  var aFrom = document.getElementById('cmp-a-from').value;
+  var aTo   = document.getElementById('cmp-a-to').value;
+  var bFrom = document.getElementById('cmp-b-from').value;
+  var bTo   = document.getElementById('cmp-b-to').value;
+
+  if (!aFrom || !bFrom) {
+    showError('Please set at least a start date for both periods.');
+    return;
+  }
+
+  var runsA = filterRuns(aFrom, aTo || '9999-12-31');
+  var runsB = filterRuns(bFrom, bTo || '9999-12-31');
+  var mapA  = aggregateByQuery(runsA);
+  var mapB  = aggregateByQuery(runsB);
+
+  // Only queries in BOTH periods
+  var common = Object.keys(mapA).filter(function(q){ return mapB[q]; });
+
+  if (!common.length) {
+    document.getElementById('empty-msg').textContent = 'No queries found in both periods. Try adjusting the date ranges.';
+    document.getElementById('empty-msg').style.display = 'block';
+    document.getElementById('kpi-row').style.display = 'none';
+    document.getElementById('results-wrap').style.display = 'none';
+    return;
+  }
+  document.getElementById('empty-msg').style.display = 'none';
+
+  // Period labels
+  var lblA = aFrom + (aTo ? ' → ' + aTo : '+');
+  var lblB = bFrom + (bTo ? ' → ' + bTo : '+');
+
+  // Build domain → subdomain → query tree
+  var tree = {};
+  common.forEach(function(q) {
+    var d  = mapA[q].domain;
+    var sd = mapA[q].subdomain;
+    if (!tree[d]) tree[d] = {};
+    if (!tree[d][sd]) tree[d][sd] = [];
+    tree[d][sd].push(q);
+  });
+
+  // Totals for KPIs
+  var totEvalA=0, totEvalB=0, totGoodA=0, totGoodB=0;
+  common.forEach(function(q){
+    totEvalA += mapA[q].total; totGoodA += mapA[q].good;
+    totEvalB += mapB[q].total; totGoodB += mapB[q].good;
+  });
+  var totRateA = totEvalA > 0 ? Math.round(totGoodA/totEvalA*100) : 0;
+  var totRateB = totEvalB > 0 ? Math.round(totGoodB/totEvalB*100) : 0;
+
+  // KPI row
+  var kpiHtml =
+    '<div class="kpi"><div class="kpi-val">' + common.length + '</div><div class="kpi-lbl">Common queries</div></div>' +
+    '<div class="kpi"><div class="kpi-val" style="color:#60a5fa">' + runsA.length + '</div><div class="kpi-lbl">Runs in Period A</div><div class="kpi-sub">' + lblA + '</div></div>' +
+    '<div class="kpi"><div class="kpi-val" style="color:#34d399">' + runsB.length + '</div><div class="kpi-lbl">Runs in Period B</div><div class="kpi-sub">' + lblB + '</div></div>' +
+    '<div class="kpi"><div class="kpi-val" style="color:#60a5fa">' + badge(totRateA) + '</div><div class="kpi-lbl">Good Rate — Period A</div></div>' +
+    '<div class="kpi"><div class="kpi-val" style="color:#34d399">' + badge(totRateB) + '</div><div class="kpi-lbl">Good Rate — Period B</div></div>' +
+    '<div class="kpi"><div class="kpi-val">' + delta(totRateB-totRateA) + '</div><div class="kpi-lbl">Overall Delta</div></div>';
+  document.getElementById('kpi-row').innerHTML = kpiHtml;
+  document.getElementById('kpi-row').style.display = 'flex';
+
+  // Table
+  var html = '<table class="cmp-table"><thead>' +
+    '<tr><th colspan="2"></th>' +
+    '<th colspan="3" style="color:#60a5fa;border-left:1px solid var(--border)">Period A — ' + lblA + '</th>' +
+    '<th colspan="3" style="color:#34d399;border-left:1px solid var(--border)">Period B — ' + lblB + '</th>' +
+    '<th class="right"></th></tr>' +
+    '<tr>' +
+    '<th style="min-width:320px">Domain / Subdomain / Query</th><th class="right">Queries</th>' +
+    '<th class="right" style="border-left:1px solid var(--border)">Evaluated</th><th class="right">Good</th><th class="right">Rate</th>' +
+    '<th class="right" style="border-left:1px solid var(--border)">Evaluated</th><th class="right">Good</th><th class="right">Rate</th>' +
+    '<th class="right delta-cell">Δ Rate</th>' +
+    '</tr></thead><tbody>';
+
+  Object.keys(tree).sort().forEach(function(domain) {
+    // Domain totals
+    var dEvalA=0,dEvalB=0,dGoodA=0,dGoodB=0,dCount=0;
+    Object.keys(tree[domain]).forEach(function(sub){
+      tree[domain][sub].forEach(function(q){
+        dEvalA+=mapA[q].total; dGoodA+=mapA[q].good;
+        dEvalB+=mapB[q].total; dGoodB+=mapB[q].good;
+        dCount++;
+      });
+    });
+    var dRateA = dEvalA>0?Math.round(dGoodA/dEvalA*100):0;
+    var dRateB = dEvalB>0?Math.round(dGoodB/dEvalB*100):0;
+
+    html += '<tr class="row-domain">' +
+      '<td>▸ ' + domain + '</td><td class="right">' + dCount + '</td>' +
+      '<td class="right" style="border-left:1px solid rgba(37,99,235,.15)">' + dEvalA.toLocaleString() + '</td><td class="right">' + dGoodA.toLocaleString() + '</td><td class="right">' + badge(dRateA) + '</td>' +
+      '<td class="right" style="border-left:1px solid rgba(52,211,153,.1)">' + dEvalB.toLocaleString() + '</td><td class="right">' + dGoodB.toLocaleString() + '</td><td class="right">' + badge(dRateB) + '</td>' +
+      '<td class="right delta-cell">' + delta(dRateB-dRateA) + '</td>' +
+      '</tr>';
+
+    Object.keys(tree[domain]).sort().forEach(function(sub) {
+      var sEvalA=0,sEvalB=0,sGoodA=0,sGoodB=0;
+      tree[domain][sub].forEach(function(q){
+        sEvalA+=mapA[q].total; sGoodA+=mapA[q].good;
+        sEvalB+=mapB[q].total; sGoodB+=mapB[q].good;
+      });
+      var sRateA = sEvalA>0?Math.round(sGoodA/sEvalA*100):0;
+      var sRateB = sEvalB>0?Math.round(sGoodB/sEvalB*100):0;
+
+      html += '<tr class="row-sub">' +
+        '<td>↳ ' + sub + '</td><td class="right">' + tree[domain][sub].length + '</td>' +
+        '<td class="right" style="border-left:1px solid rgba(37,99,235,.1)">' + sEvalA.toLocaleString() + '</td><td class="right">' + sGoodA.toLocaleString() + '</td><td class="right">' + badge(sRateA) + '</td>' +
+        '<td class="right" style="border-left:1px solid rgba(52,211,153,.08)">' + sEvalB.toLocaleString() + '</td><td class="right">' + sGoodB.toLocaleString() + '</td><td class="right">' + badge(sRateB) + '</td>' +
+        '<td class="right delta-cell">' + delta(sRateB-sRateA) + '</td>' +
+        '</tr>';
+
+      tree[domain][sub].sort().forEach(function(q) {
+        var qA = mapA[q], qB = mapB[q];
+        var qRateA = qA.total>0?Math.round(qA.good/qA.total*100):0;
+        var qRateB = qB.total>0?Math.round(qB.good/qB.total*100):0;
+        var qLabel = q.length > 90 ? q.slice(0,87) + '…' : q;
+        html += '<tr class="row-query">' +
+          '<td title="' + q.replace(/"/g,'&quot;') + '">' + qLabel + '</td><td></td>' +
+          '<td class="right" style="border-left:1px solid rgba(37,99,235,.08)">' + qA.total + '</td><td class="right">' + qA.good + '</td><td class="right">' + badge(qRateA) + '</td>' +
+          '<td class="right" style="border-left:1px solid rgba(52,211,153,.06)">' + qB.total + '</td><td class="right">' + qB.good + '</td><td class="right">' + badge(qRateB) + '</td>' +
+          '<td class="right delta-cell">' + delta(qRateB-qRateA) + '</td>' +
+          '</tr>';
+      });
+    });
+  });
+
+  // Total row
+  html += '<tr class="row-total">' +
+    '<td>Total — ' + common.length + ' common queries</td><td></td>' +
+    '<td class="right" style="border-left:1px solid rgba(37,99,235,.15)">' + totEvalA.toLocaleString() + '</td><td class="right">' + totGoodA.toLocaleString() + '</td><td class="right">' + badge(totRateA) + '</td>' +
+    '<td class="right" style="border-left:1px solid rgba(52,211,153,.1)">' + totEvalB.toLocaleString() + '</td><td class="right">' + totGoodB.toLocaleString() + '</td><td class="right">' + badge(totRateB) + '</td>' +
+    '<td class="right delta-cell">' + delta(totRateB-totRateA) + '</td>' +
+    '</tr>';
+
+  html += '</tbody></table>';
+  document.getElementById('results-table').innerHTML = html;
+  document.getElementById('results-wrap').style.display = 'block';
+}
+
+window.addEventListener('load', loadRuns);
+</script>
+</body>
+</html>
