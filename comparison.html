@@ -277,14 +277,15 @@ function runComparison() {
 
   // Table
   var html = '<table class="cmp-table"><thead>' +
-    '<tr><th colspan="2"></th>' +
-    '<th colspan="3" style="color:#60a5fa;border-left:1px solid var(--border)">Period A — ' + lblA + '</th>' +
-    '<th colspan="3" style="color:#34d399;border-left:1px solid var(--border)">Period B — ' + lblB + '</th>' +
-    '<th class="right"></th></tr>' +
     '<tr>' +
-    '<th style="min-width:320px">Domain / Subdomain / Query</th><th class="right">Queries</th>' +
-    '<th class="right" style="border-left:1px solid var(--border)">Evaluated</th><th class="right">Good</th><th class="right">Rate</th>' +
-    '<th class="right" style="border-left:1px solid var(--border)">Evaluated</th><th class="right">Good</th><th class="right">Rate</th>' +
+    '<th style="min-width:320px">Domain / Subdomain / Query</th>' +
+    '<th class="right">Queries</th>' +
+    '<th class="right" style="border-left:2px solid rgba(96,165,250,.3);color:#60a5fa">Evaluated A</th>' +
+    '<th class="right" style="color:#60a5fa">Good A</th>' +
+    '<th class="right" style="color:#60a5fa">Rate A<br><span style=\'font-size:9px;font-weight:400;opacity:.7\'>' + lblA + '</span></th>' +
+    '<th class="right" style="border-left:2px solid rgba(52,211,153,.3);color:#34d399">Evaluated B</th>' +
+    '<th class="right" style="color:#34d399">Good B</th>' +
+    '<th class="right" style="color:#34d399">Rate B<br><span style=\'font-size:9px;font-weight:400;opacity:.7\'>' + lblB + '</span></th>' +
     '<th class="right delta-cell">Δ Rate</th>' +
     '</tr></thead><tbody>';
 
@@ -302,9 +303,9 @@ function runComparison() {
     var dRateB = dEvalB>0?Math.round(dGoodB/dEvalB*100):0;
 
     html += '<tr class="row-domain">' +
-      '<td>▸ ' + domain + '</td><td class="right">' + dCount + '</td>' +
-      '<td class="right" style="border-left:1px solid rgba(37,99,235,.15)">' + dEvalA.toLocaleString() + '</td><td class="right">' + dGoodA.toLocaleString() + '</td><td class="right">' + badge(dRateA) + '</td>' +
-      '<td class="right" style="border-left:1px solid rgba(52,211,153,.1)">' + dEvalB.toLocaleString() + '</td><td class="right">' + dGoodB.toLocaleString() + '</td><td class="right">' + badge(dRateB) + '</td>' +
+      '<td style="color:var(--text)">&#9658; ' + domain + '</td><td class="right" style="color:var(--text)">' + dCount + '</td>' +
+      '<td class="right" style="border-left:2px solid rgba(96,165,250,.3)">' + dEvalA.toLocaleString() + '</td><td class="right">' + dGoodA.toLocaleString() + '</td><td class="right">' + badge(dRateA) + '</td>' +
+      '<td class="right" style="border-left:2px solid rgba(52,211,153,.3)">' + dEvalB.toLocaleString() + '</td><td class="right">' + dGoodB.toLocaleString() + '</td><td class="right">' + badge(dRateB) + '</td>' +
       '<td class="right delta-cell">' + delta(dRateB-dRateA) + '</td>' +
       '</tr>';
 
@@ -318,9 +319,9 @@ function runComparison() {
       var sRateB = sEvalB>0?Math.round(sGoodB/sEvalB*100):0;
 
       html += '<tr class="row-sub">' +
-        '<td>↳ ' + sub + '</td><td class="right">' + tree[domain][sub].length + '</td>' +
-        '<td class="right" style="border-left:1px solid rgba(37,99,235,.1)">' + sEvalA.toLocaleString() + '</td><td class="right">' + sGoodA.toLocaleString() + '</td><td class="right">' + badge(sRateA) + '</td>' +
-        '<td class="right" style="border-left:1px solid rgba(52,211,153,.08)">' + sEvalB.toLocaleString() + '</td><td class="right">' + sGoodB.toLocaleString() + '</td><td class="right">' + badge(sRateB) + '</td>' +
+        '<td>&#8627; ' + sub + '</td><td class="right">' + tree[domain][sub].length + '</td>' +
+        '<td class="right" style="border-left:2px solid rgba(96,165,250,.15)">' + sEvalA.toLocaleString() + '</td><td class="right">' + sGoodA.toLocaleString() + '</td><td class="right">' + badge(sRateA) + '</td>' +
+        '<td class="right" style="border-left:2px solid rgba(52,211,153,.15)">' + sEvalB.toLocaleString() + '</td><td class="right">' + sGoodB.toLocaleString() + '</td><td class="right">' + badge(sRateB) + '</td>' +
         '<td class="right delta-cell">' + delta(sRateB-sRateA) + '</td>' +
         '</tr>';
 
@@ -331,8 +332,8 @@ function runComparison() {
         var qLabel = q.length > 90 ? q.slice(0,87) + '…' : q;
         html += '<tr class="row-query">' +
           '<td title="' + q.replace(/"/g,'&quot;') + '">' + qLabel + '</td><td></td>' +
-          '<td class="right" style="border-left:1px solid rgba(37,99,235,.08)">' + qA.total + '</td><td class="right">' + qA.good + '</td><td class="right">' + badge(qRateA) + '</td>' +
-          '<td class="right" style="border-left:1px solid rgba(52,211,153,.06)">' + qB.total + '</td><td class="right">' + qB.good + '</td><td class="right">' + badge(qRateB) + '</td>' +
+          '<td class="right" style="border-left:2px solid rgba(96,165,250,.1)">' + qA.total + '</td><td class="right">' + qA.good + '</td><td class="right">' + badge(qRateA) + '</td>' +
+          '<td class="right" style="border-left:2px solid rgba(52,211,153,.1)">' + qB.total + '</td><td class="right">' + qB.good + '</td><td class="right">' + badge(qRateB) + '</td>' +
           '<td class="right delta-cell">' + delta(qRateB-qRateA) + '</td>' +
           '</tr>';
       });
