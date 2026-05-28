@@ -207,6 +207,40 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- COMPARISON SECTION -->
+<div class="page-wrap" style="padding-top:0">
+<div class="compare-section" id="compare-section">
+  <div class="compare-header">
+    &#128202; Period Comparison
+    <span style="font-size:12px;font-weight:400;color:var(--text3)">Compare match rates for the same queries across two date ranges</span>
+  </div>
+  <div class="compare-controls">
+    <div>
+      <label>Period A &mdash; From</label>
+      <input type="date" id="cmp-a-from">
+    </div>
+    <div>
+      <label>Period A &mdash; To</label>
+      <input type="date" id="cmp-a-to">
+    </div>
+    <div style="display:flex;align-items:center;padding-bottom:2px;color:var(--text3);font-size:18px;font-weight:300">vs</div>
+    <div>
+      <label>Period B &mdash; From</label>
+      <input type="date" id="cmp-b-from">
+    </div>
+    <div>
+      <label>Period B &mdash; To</label>
+      <input type="date" id="cmp-b-to">
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button class="compare-btn" onclick="runComparison()">Compare</button>
+    </div>
+  </div>
+  <div id="compare-results"><div class="compare-empty">Set date ranges above and click Compare.</div></div>
+</div>
+</div>
+
 <script>
 var chartInstance = null;
 var allRuns = [];
