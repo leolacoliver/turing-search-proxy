@@ -327,7 +327,7 @@ function renderDomainTable(runs) {
         var dateStr = qRuns.length ? (qRuns[0].created_at||'').slice(0,10) : '';
         var url = '/candidates.html?run_id=' + encodeURIComponent(runId) + '&query=' + encodeURIComponent(q) + '&date=' + encodeURIComponent(dateStr);
         var evalSize = qRuns.length ? (qRuns[0].eval_size || 100) : 100;
-        var evalBadge = evalSize >= 500 ? ' <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(37,99,235,.2);color:var(--blue2)">500</span>' : '';
+        var evalBadge = evalSize > 100 ? ' <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(37,99,235,.2);color:var(--blue2)">' + evalSize + '</span>' : '';
         // Compute match rate for this query across filtered runs
         var qTotal = qRuns.reduce(function(a,r){ return a+(r.total_results||0); }, 0);
         var qGood = qRuns.reduce(function(a,r){ return a+(r.good_fits||0); }, 0);
