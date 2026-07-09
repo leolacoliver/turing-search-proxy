@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
   // Smart search to get talents + decomposition
   try {
-    const searchRes = await fetch("https://search.turing.com/api/talent/search/smart", {
+    const searchRes = await fetch("https://staging-search.turing.com/api/talent/search/smart", {
       method: "POST",
       headers,
       body: JSON.stringify({ query, page: 1, pageSize, filters }),
