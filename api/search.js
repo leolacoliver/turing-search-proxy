@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const upstream = await fetch("https://search.turing.com/api/talent/search/smart", {
+    const upstream = await fetch("https://staging-search.turing.com/api/talent/search/smart", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
