@@ -19,7 +19,9 @@ export default async function handler(req, res) {
   if (!profiles || !profiles.length) return res.status(400).json({ error: "profiles is required" });
 
   function extractSkills(p) {
-    const raw = p.skills || p.topSkills || p.primarySkills || [];
+    const primary = p.skills || p.topSkills || p.primarySkills || [];
+    const additional = p.additionalSkills || [];
+    const raw = [...primary, ...additional];
     return raw.map(s => {
       if (typeof s === "string") return s;
       if (s && typeof s === "object") {
