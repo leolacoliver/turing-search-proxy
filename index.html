@@ -121,7 +121,7 @@ select option{background:var(--bg3);}
           <option value="36">36</option>
           <option value="50">50</option>
           <option value="100" selected>100</option>
-          <option value="500">500 ⚠️ ~12 min/query</option>
+          <option value="1000">1000 ⚠️ ~24 min/query</option>
         </select>
       </div>
     </div>
@@ -395,7 +395,7 @@ async function runQuery(query, pageSize, runId) {
   log('Evaluating ' + Math.min(s.profiles.length, 100) + ' profiles...');
   updateSummaryRow(query);
 
-  var toEval = s.profiles.slice(0, 500);
+  var toEval = s.profiles.slice(0, 1000);
   var BATCH = 10, totalBatches = Math.ceil(toEval.length / BATCH);
   var MAX_RETRIES = 4, PAUSE_MS = 1500;
 
