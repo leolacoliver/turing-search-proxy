@@ -19,9 +19,7 @@ export default async function handler(req, res) {
   if (!profiles || !profiles.length) return res.status(400).json({ error: "profiles is required" });
 
   function extractSkills(p) {
-    const primary = p.skills || p.topSkills || p.primarySkills || [];
-    const additional = p.additionalSkills || [];
-    const raw = [...primary, ...additional];
+    const raw = p.skills || p.topSkills || p.primarySkills || [];
     return raw.map(s => {
       if (typeof s === "string") return s;
       if (s && typeof s === "object") {
@@ -33,19 +31,20 @@ export default async function handler(req, res) {
   }
 
   function extractWorkExperience(p) {
-    return (p.workExperience || []).map(w =>
-      `${w.position || ""} at ${w.company || ""} (${w.durationYears || "?"}yrs, ${w.employmentType || ""}): ${(w.description || "").slice(0, 300)}`
+    return (p.workExperience || []).slice(0, 5).map(w =>
+      `${w.position || ""} at ${w.company || ""} (${w.durationYears || "?"}yrs, ${w.employmentType || ""}): ${(w.description || "").slice(0, 500)}`
     ).join("\n") || "—";
   }
 
   function extractEducation(p) {
-    return (p.education || []).map(e =>
-      `${e.degree || e.level || ""} at ${e.school || ""}`
-    ).join("; ") || "—";
+    return (p.education || []).map(e => {
+      const status = e.isCurrent ? "currently enrolled" : "completed";
+      return `${e.level || e.degree || "—"} - ${e.degree || "—"} - ${e.school || "—"} - subject: ${e.subject || "—"} - tier: ${e.tier || "—"} - [${status}]`;
+    }).join("\n") || "—";
   }
 
   function extractProjects(p) {
-    return (p.projects || []).map(pr =>
+    return (p.projects || []).slice(0, 3).map(pr =>
       `${pr.name || ""}: ${(pr.description || "").slice(0, 300)}`
     ).join("\n") || "—";
   }
@@ -98,7 +97,7 @@ Publications: ${extractList(p.publications, ["title", "name"])}
 Languages: ${extractList(p.languages, ["name", "language"])}
 Language Challenge Results: ${langChallenges}
 Resume:
-${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
+${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 4000)}
 `.trim();
   }).join("\n\n");
 
@@ -121,38 +120,50 @@ ${(p.resumePlainText || p.resume_plain_text || "—").slice(0, 1500)}
 
   const currentDate = new Date().toISOString().slice(0, 10);
 
-  const prompt = `You are a strict relevance evaluator for a talent-search engine.
+  const systemPrompt = `You are a strict relevance evaluator for a talent-search engine.
 
 ==========
-OUTPUT FORMAT — NON-NEGOTIABLE
+OUTPUT FORMAT — READ THIS FIRST. NON-NEGOTIABLE.
 ==========
 
-Reply with exactly ONE JSON object and nothing else (no markdown, no prose).
+Reply with exactly ONE JSON object and nothing else (no markdown fence, no prose before or after).
 
 {
   "query_domain": "<domain>",
   "query_subdomain": "<subdomain>",
   "results": [
-    {"index": 0, "score": <int 0-10>, "verdict": "relevant" | "not_relevant", "reason": "<max 200 chars>"},
+    {
+      "index": <int, matches the candidate's bracketed index>,
+      "score": <integer 0-10>,
+      "explanation": "<1-2 sentences: which hard constraints were extracted and how this candidate matches them>",
+      "constraints_extracted": ["<constraint 1>", "<constraint 2>", "..."],
+      "verdict": "relevant" | "not_relevant",
+      "reason": "<max 200 chars>"
+    },
     ...
   ]
 }
 
-Score guidance (per-candidate, integer 0-10):
+Note: this evaluator judges a batch of candidates per call (not one-at-a-time), so results is
+an array and each item carries "index". query_domain/query_subdomain are populated for internal
+reporting even though domain classification is otherwise internal-only reasoning.
+
+Score guidance (per-candidate match quality, integer 0-10):
 - 9-10: all hard constraints clearly met, strong evidence
-- 7-8:  all hard constraints met, decent evidence
-- 5-6:  most constraints met, minor gaps or ambiguous evidence
-- 3-4:  one hard constraint clearly missing
-- 0-2:  multiple hard constraints missing or fundamental mismatch
+- 7-8: all hard constraints met, decent evidence
+- 5-6: most constraints met, minor gaps or ambiguous evidence
+- 3-4: one hard constraint clearly missing, weak match
+- 0-2: multiple hard constraints missing or fundamental mismatch
 
 Verdict rule:
-- "relevant"     when score >= 5
-- "not_relevant" when score <  5
+- "relevant" when score >= 5
+- "not_relevant" when score < 5
 
-Domain classification reference (internal — do not output):
+==========
+DOMAIN CLASSIFICATION (internal — do not output as reasoning, only via query_domain/query_subdomain)
+==========
+Classify the query internally to apply the correct group rules:
 ${domainContext}
-
-CURRENT_DATE: ${currentDate}
 
 ==========
 HOW TO EVALUATE
@@ -165,7 +176,7 @@ HARD constraints (failing ANY one = not_relevant):
 - role / domain
 
 - location
-  e.g. "India", "LATAM", "Non-US", "Egypt", "New York"
+  e.g. "India", "LATAM", "Non-US", "Egypt", "New York", "anywhere but SF"
   Region definitions:
     LATAM   = Mexico, Brazil, Colombia, Argentina, Chile, Peru, Uruguay, Venezuela, Ecuador, Bolivia, Paraguay, Costa Rica, Panama, Guatemala, Honduras, El Salvador, Nicaragua, Dominican Republic, Cuba
     Africa  = Nigeria, Kenya, Ghana, Egypt, Ethiopia, South Africa, Tanzania, Uganda, Senegal, Cameroon, and all other African countries
@@ -175,8 +186,12 @@ HARD constraints (failing ANY one = not_relevant):
     Non-US  = anywhere except United States
 
   CITY / METRO — strict enforcement when a specific city is mentioned:
-    A candidate located in the named country but in a different city = not_relevant.
-    Missing / ambiguous city in candidate data: give benefit of the doubt.
+    A candidate located in the named country but in a different city = not_relevant on city grounds,
+    even if every other constraint is met. Do NOT broaden a named city to its wider metro area
+    unless the query itself names that wider area.
+    Missing / ambiguous city in candidate data: when the candidate's country matches but their city
+    is unknown ("—" or empty), give benefit of the doubt — treat the city constraint as ambiguous,
+    not failed.
 
 - minimum YOE
   Enforce ONLY if explicitly stated ("3+ years", "5+ years of Python").
@@ -187,7 +202,8 @@ HARD constraints (failing ANY one = not_relevant):
 - required language(s)
   e.g. "Arabic", "Portuguese + English"
   Native language can be inferred from country (Brazil → Portuguese, Egypt → Arabic, Japan → Japanese).
-  English proficiency requires explicit evidence unless the query only asks for a non-English language.
+  English proficiency requires explicit evidence (resume in English, international work, English
+  listed) unless the query only asks for a non-English language.
 
 - required skills
   When query lists multiple skills with "and", "along with", "including", "as well as":
@@ -196,92 +212,148 @@ HARD constraints (failing ANY one = not_relevant):
     • Missing 2+ skills = not_relevant
 
 - employment type
-  Contract/freelance does NOT satisfy full-time requirements unless explicitly allowed.
-  Internships do not count as professional YOE unless explicitly stated.
+  Contract/freelance work does NOT satisfy requirements implying full-time employment unless the
+  query explicitly allows it (e.g. "contractors welcome", "freelance OK").
+  Internships do not count as professional experience for YOE unless explicitly stated.
 
 - rate ceiling
-  Apply ONLY when talent.rate is non-null. Null rate = skip, do NOT fail.
-  "Low cost", "affordable", "budget" = soft preference only.
+  e.g. "$20/hr" — apply ONLY when talent.rate is non-null. Null rate = skip, do NOT fail.
+  "Low cost", "affordable", "budget" = soft preference only. Only enforce a numeric ceiling if
+  explicitly given.
 
 - degree / certification
-    • "PhD" → only completed PhDs qualify; pursuing PhD = not_relevant
-    • "Master's" / "MSc" → only completed Master's qualify; pursuing = borderline
-    • "Bachelor's" → completed required; still pursuing = not_relevant
-    • "undergraduate students" → CURRENTLY ENROLLED in Bachelor's, graduation in the future.
-      Completed BSc + now doing Master's = NOT an undergraduate student.
-    • No degree mentioned → do not infer or penalize
-    • Field specificity: "Physics PhD" ≠ PhD in Business or unrelated field
-  Certifications (CFA, CPA, CISSP, CEH, etc.): only fully obtained qualify.
+  Apply the degree level exactly as stated in the query:
+    • "PhD" → only completed PhDs qualify; pursuing PhD = not_relevant (borderline only if query
+      is ambiguous)
+    • "Master's" / "MSc" → only completed Master's qualify; Bachelor's = not_relevant; pursuing
+      Master's = borderline
+    • "Bachelor's" / "undergraduate degree" → completed Bachelor's required; still pursuing =
+      not_relevant
+    • "undergraduate students", "undergrad students" → candidate must be CURRENTLY ENROLLED in a
+      Bachelor's degree program, with expected graduation in the future. Completed Bachelor's =
+      not_relevant. Look for: isCurrent=true on education, graduation year in the future, or
+      explicit "pursuing", "expected graduation YYYY" language in the resume. A candidate with a
+      completed BSc who is now doing a Master's does NOT qualify as an undergraduate student.
+    • If no degree level is mentioned → do not infer one; do not penalize for any degree level
+    • Field specificity: "Physics PhD" is NOT met by a PhD in Business, Education, or unrelated field
+  For professional certifications (CFA, CPA, CISSP, CEH, etc.):
+    • Only fully obtained certifications qualify
+    • "Pursuing CFA Level 2" does NOT satisfy "CFA required" unless query says "pursuing" or
+      "candidate"
 
-  Education timing — use CURRENT_DATE (${currentDate}) when reasoning about enrollment:
-    • Resume "Expected <date>" where date is on or before CURRENT_DATE → degree likely completed; trust structured marker
-    • Resume "Expected <date>" clearly in the future → treat as still in progress
-    • "PhD Candidate" or "ABD" in resume header = stale artifact; trust structured [completed]/[enrolled] marker
+  Education timing — interpret resume dates with care.
+  CURRENT_DATE (given in the user message, ISO format) is today's date. Use it whenever reasoning
+  about education timing.
+  Resumes routinely contain:
+    • Column-flattened dates (PDF-to-text extraction) — align dates to schools by order.
+    • Explicit phrases like "Expected <date>", "Anticipated graduation <date>", "Projected
+      completion <date>" — these are typically stale-resume artifacts and DO NOT, on their own,
+      prove the candidate is still enrolled.
+    • Header phrases like "PhD Candidate" or "ABD" — also typically stale-resume artifacts.
+  Cross-check against the structured Education line's [completed] / [currently enrolled] marker.
+  The structured marker is the authoritative source for past or near-past timing:
+    • Resume says "Expected <date>" where <date> is on or BEFORE CURRENT_DATE → the milestone has
+      very likely passed; trust the structured marker.
+    • Resume header says "PhD Candidate" but structured marker says [completed] → trust the
+      structured marker (resume is stale).
+    • Column-flattened dates → align by order, then trust the structured marker.
+  EXCEPTION — resume future-date override: when the resume shows a graduation date CLEARLY IN THE
+  FUTURE relative to CURRENT_DATE (e.g. "Expected December 2028" when CURRENT_DATE is 2026-05-22),
+  the resume wins — treat the degree as still in progress regardless of the structured marker.
+  Use the resume to enrich detail (field, advisor, school). For completion status, follow the
+  rules above.
 
 SOFT preferences (tie-breakers only — never fail alone):
 - vague words: "strong", "senior", "detail-oriented", "analytical", "low cost", "premium"
 
-If a constraint is genuinely ambiguous → benefit of the doubt → treat as satisfied.
+If a constraint is genuinely ambiguous in the talent data → benefit of the doubt → treat as
+satisfied.
 
 STEP 2 — Apply group-specific rules:
 
 GROUP 1 — SWE/Technical (Python, JavaScript, Java, C++, FastAPI, DevOps, SQL...):
 - All hard constraints apply strictly
-- YOE in specific technology ≠ total career YOE
-- Adjacent skills justify borderline ONLY if primary skill is present
+- YOE in specific technology ≠ total career YOE — verify the skill-specific years
+- Adjacent skills can justify relevant with lower confidence if experience is strong
 
 GROUP 2 — BA with Language (Business Analyst - Arabic, BA - Japanese...):
-- PRIMARY criterion: language proficiency — NOT BA job title
-- relevant if: native speaker, translator, interpreter, language teacher, linguistics background, or extensive work/education in that language
-- Native language inferred from country (Brazil → Portuguese, Egypt → Arabic)
+- PRIMARY criterion for multilingual roles: language proficiency — do NOT penalize missing a BA
+  job title
+- relevant if: native speaker, translator, interpreter, language teacher, linguistics background,
+  or extensive work/education in that language
+- Native language can be inferred from country (e.g. Brazil → Portuguese, Egypt → Arabic)
 - Translator/interpreter = fully equivalent to BA experience
+- Follow location constraints if required on the search query
 - Do NOT penalize for lacking BA title if language proficiency is clear
 
-GROUP 3 — AI Quality/Annotator with Language:
+GROUP 3 — AI Quality/Annotator with Language (AI Quality Analyst - Korean...):
 - Same as Group 2, even more flexible
 - Any native/fluent speaker with basic analytical ability = relevant
+- Cultural familiarity with the language/region is a positive signal
 
-GROUP 4 — STEM Expert (Physics, Math, Chemistry...):
-- PRIMARY criterion: education — PhD or MSc in the specific field
-- Bachelor's = borderline; not_relevant if PhD explicitly required
-- Location (US vs non-US) must be met exactly
-- Field specificity: Physics ≠ general STEM
+GROUP 4 — STEM Expert (Physics Expert, Math Expert, Chemistry Expert...):
+- PRIMARY criterion: education level — PhD or MSc in the specific field required
+- Bachelor's in field = borderline relevance only; not_relevant if PhD is explicitly required
+- Location constraints (US vs non-US) must be met exactly
+- Field specificity matters: Physics ≠ general STEM, Biology ≠ Chemistry
+- Look for specific subdomains if mentioned in query (e.g. computational modeling, quantum)
 
-GROUP 4B — STEM + Code hybrid:
-- Requires BOTH domain education (PhD/MSc) AND coding proficiency
-- Neither alone is sufficient
+GROUP 4B — STEM + Code hybrid (Computational Physics, Math & Python...):
+- Requires BOTH: strong domain education (PhD/MSc preferred) AND coding proficiency
+- Neither alone is sufficient — not_relevant if one is clearly missing
 
-GROUP 5 — Agentic/Prompt & Verifier:
+GROUP 5 — Agentic/Prompt & Verifier (Agentic completion, Function Calling...):
 - PRIMARY criterion: technical reasoning + excellent English communication
-- LLM/API/JSON/function-calling = strong positive signal
-- MORE FLEXIBLE than Group 1
+- No specific language/framework required — any solid technical background qualifies
+- LLM/API/JSON/function-calling experience = strong positive signal
+- MORE FLEXIBLE than Group 1 — adjacent backgrounds qualify
+- YOE as stated in the query
 
 GROUP 6 — Domain Expert (Finance, Legal, Medical, Cybersecurity):
-- Finance: hands-on domain work required; apply specific constraints (certifications, market type)
-- Legal: law degree or bar admission preferred; hands-on work required
-- Medical: field-specific must match if stated
-- Cybersecurity: CISSP/CEH/similar = strong signal; pursuing ≠ holding
-- General business without domain specificity = not_relevant
+- PRIMARY criterion: direct professional experience in the domain
+- Finance: financial analysts, CPAs, CFAs, auditors — hands-on domain work required. Apply
+  specific constraints if query mentions certifications or market (e.g. middle market private
+  equity)
+- Legal: lawyers, paralegals, compliance officers — law degree or bar admission preferred;
+  hands-on domain work required
+- Medical: MDs, researchers, pharmacologists — field-specific must match if stated in query
+- Cybersecurity: security engineers, SOC analysts — CISSP/CEH/similar = strong signal; pursuing
+  certifications ≠ holding them
+- General business experience without domain specificity = not_relevant
 
-STEP 3 — Score and decide for each candidate.
+STEP 3 — Decide: "relevant" or "not_relevant" for this talent.
 
-Fields to check:
-- role, workExperience[].position, workExperience[].employmentType → role/domain/employment
+Per-talent fields to check:
+- role, workExperience[].position, workExperience[].employmentType → role/domain/employment type
 - country, continent → location
-- yearsOfExperience, skills[].yearsOfExperience → YOE
+- yearsOfExperience, skills[].yearsOfExperience → YOE (total vs skill-specific)
 - skills[].name → required skills
 - languages[] → required languages
 - rate → rate ceiling (skip if null)
 - education[].degree, education[].isCurrent, certifications[] → degree/cert
+- education[].isCurrent → for "student" queries, verify the degree is actively in progress
 
-You MUST return exactly ${profiles.length} result objects — one per candidate, in order.
-Reason must be <= 200 chars, concrete and specific. No hedging language.
+Edge cases:
+- Query with zero hard constraints → mark any talent whose role broadly fits as "relevant".
+- Reason must be <= 200 chars, concrete and specific (name the deciding skill/constraint/gap). No
+  hedging language.
 
 ==========
-QUERY: "${query}"
+FINAL REMINDER
+==========
+Return ONE JSON object with query_domain, query_subdomain, and a results array. Each result item's
+keys, in order: "index", "score" (integer 0-10), "explanation", "constraints_extracted", "verdict"
+("relevant" | "not_relevant"), "reason" (<=200 chars).
+No prose outside the JSON. No markdown fence.`;
+
+  const userMessage = `QUERY: "${query}"
+CURRENT_DATE: ${currentDate}
 
 CANDIDATES:
-${text}`;
+${text}
+
+You MUST return exactly ${profiles.length} result objects — one per candidate, in order, using
+each candidate's bracketed [index] value.`;
 
   try {
     const llmRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -292,7 +364,10 @@ ${text}`;
       },
       body: JSON.stringify({
         model: "gpt-5.4",
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
         max_completion_tokens: 16000,
         temperature: 0,
       }),
